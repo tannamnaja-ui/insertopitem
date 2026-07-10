@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ตั้งค่าการเชื่อมต่อ | Insert ค่าใช้จ่าย</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="page-center">
+  <div class="card card-sm" style="max-width: 460px;">
+    <a href="index.html" class="back-link">&larr; กลับไปหน้าเข้าสู่ระบบ</a>
+
+    <div class="brand">
+      <div class="brand-icon">⚙️</div>
+      <div>
+        <h1>ตั้งค่าการเชื่อมต่อ</h1>
+        <p class="subtitle" style="margin:0;">เลือกและกำหนดค่าฐานข้อมูลที่ต้องการเชื่อมต่อ</p>
+      </div>
+    </div>
+
+    <div id="alert" class="alert"></div>
+
+    <div class="type-toggle">
+      <div class="type-option active" data-type="mysql" id="opt-mysql">MySQL</div>
+      <div class="type-option" data-type="postgresql" id="opt-postgresql">PostgreSQL</div>
+    </div>
+
+    <form id="configForm">
+      <div class="field">
+        <label>IP Server</label>
+        <input type="text" id="host" placeholder="เช่น 192.168.1.10" required>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>Port</label>
+          <input type="text" id="port" placeholder="3306" required>
+        </div>
+        <div class="field">
+          <label>Database</label>
+          <input type="text" id="database" placeholder="ชื่อฐานข้อมูล" required>
+        </div>
+      </div>
+      <div class="field">
+        <label>Username</label>
+        <input type="text" id="dbuser" placeholder="ผู้ใช้งานฐานข้อมูล" required>
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input type="password" id="dbpassword" placeholder="รหัสผ่านฐานข้อมูล">
+      </div>
+
+      <div class="row">
+        <button type="button" class="btn btn-secondary btn-block" id="testBtn">🔌 ทดสอบการเชื่อมต่อ</button>
+        <button type="submit" class="btn btn-primary btn-block" id="saveBtn">💾 บันทึกข้อมูลเชื่อมต่อ</button>
+      </div>
+    </form>
+
+    <hr class="divider">
+
+    <h3 style="margin-bottom:10px;">ตาราง Template ค่าใช้จ่าย (template_opitem)</h3>
+    <div class="status-line" id="tableStatusLine">
+      <span class="status-dot" id="tableStatusDot"></span>
+      <span id="tableStatusText">กำลังตรวจสอบ...</span>
+    </div>
+    <button type="button" class="btn btn-block btn-gray" id="tableActionBtn" disabled>ตรวจสอบตาราง...</button>
+  </div>
+</div>
+
+<script src="js/settings.js"></script>
+</body>
+</html>

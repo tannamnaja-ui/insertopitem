@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>สร้าง Template ค่าใช้จ่าย</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div style="padding: 36px 24px;">
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-icon">🧾</div>
+      <div>
+        <h1 style="margin-bottom:0;">สร้าง Template ค่าใช้จ่าย</h1>
+        <p class="subtitle" style="margin:0;">เลือกรายการจาก s_drugitems แล้วบันทึกเป็น Template สำหรับใช้งานซ้ำ</p>
+      </div>
+    </div>
+    <div class="pill">
+      <span id="officerName">-</span>
+      <button class="link-btn" onclick="logout()">ออกจากระบบ</button>
+    </div>
+  </div>
+
+  <a href="menu.html" class="back-link" style="max-width:1180px;margin-left:auto;margin-right:auto;display:block;">&larr; กลับไปหน้าเมนูหลัก</a>
+
+  <div class="card card-xl" style="margin: 0 auto 24px;">
+    <h2>เพิ่มรายการเข้า Template</h2>
+    <p class="subtitle">ค้นหาชื่อรายการจากคลังยา/เวชภัณฑ์ (s_drugitems)</p>
+
+    <div id="alert" class="alert"></div>
+
+    <div class="row">
+      <div class="field search-wrap">
+        <label>ค้นหารายการ (ชื่อ หรือ icode)</label>
+        <input type="text" id="drugSearch" placeholder="พิมพ์เพื่อค้นหา เช่น พาราเซตามอล">
+        <div class="search-results" id="searchResults"></div>
+      </div>
+      <div class="field search-wrap">
+        <label>วิธีใช้ยา</label>
+        <input type="text" id="usageInput" placeholder="พิมพ์เพื่อค้นหาวิธีใช้ยา" autocomplete="off">
+        <div class="search-results" id="usageResults"></div>
+      </div>
+      <div class="field" style="max-width:160px;">
+        <label>รหัสวิธีใช้ยา</label>
+        <input type="text" id="usageCode" disabled>
+      </div>
+    </div>
+
+    <div id="selectedItemBox" class="hidden" style="background:var(--green-50); border-radius:12px; padding:16px 18px; margin-bottom:18px;">
+      <div class="row" style="align-items:flex-end;">
+        <div class="field" style="margin-bottom:0;">
+          <label>icode</label>
+          <input type="text" id="selIcode" disabled>
+        </div>
+        <div class="field" style="margin-bottom:0; flex:2;">
+          <label>ชื่อรายการ</label>
+          <input type="text" id="selName" disabled>
+        </div>
+        <div class="field" style="margin-bottom:0;">
+          <label>ราคา</label>
+          <input type="text" id="selPrice" disabled>
+        </div>
+        <div class="field" style="margin-bottom:0; max-width:90px;">
+          <label>income</label>
+          <input type="text" id="selIncome" disabled>
+        </div>
+        <div class="field" style="margin-bottom:0; max-width:110px;">
+          <label>cost</label>
+          <input type="text" id="selCost" disabled>
+        </div>
+        <div class="field" style="margin-bottom:0; max-width:110px;">
+          <label>จำนวน (qty)</label>
+          <input type="number" id="selQty" value="1" min="1">
+        </div>
+        <button type="button" class="btn btn-primary" id="addItemBtn">+ เพิ่ม</button>
+      </div>
+    </div>
+
+    <table id="itemsTable">
+      <thead>
+        <tr><th>icode</th><th>ชื่อรายการ</th><th>วิธีใช้ยา</th><th>รหัสวิธีใช้ยา</th><th>ราคา</th><th>income</th><th>cost</th><th>จำนวน</th><th>รวม</th><th></th></tr>
+      </thead>
+      <tbody id="itemsBody"></tbody>
+    </table>
+    <div id="itemsEmpty" class="empty-state">ยังไม่มีรายการ ค้นหาและเพิ่มรายการด้านบน</div>
+
+    <div class="summary-box" id="summaryBox" style="display:none;">
+      <span>รวมทั้งหมด</span>
+      <span id="summaryTotal">0.00 บาท</span>
+    </div>
+
+    <hr class="divider">
+
+    <div id="editingBanner" class="hidden" style="background:var(--green-100); color:var(--green-700); border-radius:10px; padding:10px 14px; margin-bottom:14px; font-size:13px; display:flex; align-items:center; justify-content:space-between;">
+      <span>✏️ กำลังแก้ไข Template: <strong id="editingBannerName"></strong></span>
+      <button type="button" class="link-btn" id="cancelEditBtn">ยกเลิก</button>
+    </div>
+
+    <div class="row" style="align-items:flex-end;">
+      <div class="field" style="margin-bottom:0; flex:2;">
+        <label>ชื่อ Template</label>
+        <input type="text" id="templateName" placeholder="เช่น ชุดตรวจสุขภาพประจำปี">
+      </div>
+      <button type="button" class="btn btn-primary" id="saveTemplateBtn">💾 บันทึก Template</button>
+    </div>
+  </div>
+
+  <div class="card card-xl" style="margin: 0 auto;">
+    <h2>Template ที่สร้างไว้แล้ว</h2>
+    <p class="subtitle">รายการ Template ทั้งหมดที่พร้อมใช้งาน</p>
+    <div id="templateList"></div>
+    <div id="templateListEmpty" class="empty-state hidden">ยังไม่มี Template ที่สร้างไว้</div>
+  </div>
+</div>
+
+<script src="js/common.js"></script>
+<script src="js/template.js"></script>
+</body>
+</html>

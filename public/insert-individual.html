@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Insert ค่าใช้จ่ายรายคน</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div style="padding: 36px 24px;">
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-icon">🧑‍⚕️</div>
+      <div>
+        <h1 style="margin-bottom:0;">Insert ค่าใช้จ่ายรายคน</h1>
+        <p class="subtitle" style="margin:0;">เลือก Template แพทย์ผู้สั่ง และระบุ VN ของผู้ป่วย</p>
+      </div>
+    </div>
+    <div class="pill">
+      <span id="officerName">-</span>
+      <button class="link-btn" onclick="logout()">ออกจากระบบ</button>
+    </div>
+  </div>
+
+  <a href="menu.html" class="back-link" style="max-width:1180px;margin-left:auto;margin-right:auto;display:block;">&larr; กลับไปหน้าเมนูหลัก</a>
+
+  <div class="card card-xl" style="margin: 0 auto;">
+    <div id="alert" class="alert"></div>
+
+    <div class="row">
+      <div>
+        <h2>1. เลือก Template</h2>
+        <div class="field">
+          <label>เลือก Template</label>
+          <select id="templateSelect">
+            <option value="">-- เลือก Template --</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <h2>2. เลือกแพทย์ผู้สั่ง</h2>
+        <div class="field search-wrap">
+          <label>ค้นหาแพทย์</label>
+          <input type="text" id="doctorSearch" placeholder="พิมพ์ชื่อแพทย์">
+          <div class="search-results" id="doctorResults"></div>
+          <input type="hidden" id="doctorCode">
+        </div>
+      </div>
+    </div>
+    <div id="templatePickerEmpty" class="empty-state hidden">ยังไม่มี Template กรุณาไปสร้างที่กล่อง "สร้าง Template ค่าใช้จ่าย" ก่อน</div>
+
+    <h2>3. ห้องที่สั่ง</h2>
+    <div class="remember-row" style="max-width:640px;">
+      <div class="field">
+        <select id="departmentSelect">
+          <option value="">-- เลือกห้องที่สั่ง --</option>
+        </select>
+      </div>
+      <button type="button" class="btn btn-secondary" id="rememberBtn">📌 จำค่า</button>
+    </div>
+
+    <hr class="divider">
+
+    <h2>4. ระบุ VN ผู้ป่วย</h2>
+    <div class="field" style="max-width:280px;">
+      <label>VN</label>
+      <input type="text" id="vnInput" placeholder="เลข VN ของผู้ป่วย">
+      <span id="vnSuccessMsg" class="hidden" style="display:block; margin-top:8px; color:var(--green-700); font-weight:600; font-size:13.5px;">✅ เพิ่มรายการสำเร็จ</span>
+    </div>
+
+    <hr class="divider">
+
+    <h2>5. รายการจาก Template</h2>
+    <table id="itemsTable">
+      <thead>
+        <tr><th>icode</th><th>ชื่อรายการ</th><th>วิธีใช้ยา</th><th>รหัสวิธีใช้ยา</th><th>ราคา</th><th>จำนวน</th><th>รวม</th></tr>
+      </thead>
+      <tbody id="itemsBody"></tbody>
+    </table>
+    <div id="itemsEmpty" class="empty-state">กรุณาเลือก Template เพื่อแสดงรายการ</div>
+    <div class="summary-box" id="summaryBox" style="display:none;">
+      <span>รวมทั้งหมด</span>
+      <span id="summaryTotal">0.00 บาท</span>
+    </div>
+
+    <hr class="divider">
+
+    <button type="button" class="btn btn-primary" id="submitBtn">✅ บันทึกค่าใช้จ่าย</button>
+  </div>
+</div>
+
+<script src="js/common.js"></script>
+<script src="js/insert-individual.js"></script>
+</body>
+</html>

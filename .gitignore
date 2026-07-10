@@ -1,0 +1,7 @@
+node_modules/
+
+# ค่าเชื่อมต่อฐานข้อมูลจริง (มี host/user/password) ห้าม commit
+server/data/dbconfig.json
+
+# ข้อมูล Template แบบเก่า (ก่อนย้ายไปเก็บที่ตาราง template_opitem) อาจมีข้อมูลภายในของโรงพยาบาล
+server/data/templates.json

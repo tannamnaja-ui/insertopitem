@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>เมนูหลัก | Insert ค่าใช้จ่าย</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div style="padding: 36px 24px;">
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-icon">💊</div>
+      <div>
+        <h1 style="margin-bottom:0;">เมนูหลัก</h1>
+        <p class="subtitle" style="margin:0;">ระบบ Insert ค่าใช้จ่าย</p>
+      </div>
+    </div>
+    <div class="pill">
+      <span id="officerName">-</span>
+      <button class="link-btn" onclick="logout()">ออกจากระบบ</button>
+    </div>
+  </div>
+
+  <div class="menu-grid">
+    <a class="menu-box" href="template.html">
+      <div class="icon">🧾</div>
+      <span class="tag">กล่องที่ 1</span>
+      <h2>สร้าง Template ค่าใช้จ่าย</h2>
+      <p>สร้างและจัดการชุดรายการค่าใช้จ่าย เลือกรายการจากคลังยา/เวชภัณฑ์ พร้อมกำหนดจำนวน เพื่อนำไปใช้ซ้ำได้รวดเร็ว</p>
+    </a>
+
+    <a class="menu-box" href="insert-group.html">
+      <div class="icon">👥</div>
+      <span class="tag">กล่องที่ 2</span>
+      <h2>Insert ค่าใช้จ่ายทั้งกลุ่ม</h2>
+      <p>เลือก Template ที่สร้างไว้ พร้อมระบุแพทย์ผู้สั่ง เพื่อบันทึกค่าใช้จ่ายให้กับผู้ป่วยหลายรายพร้อมกัน</p>
+    </a>
+
+    <a class="menu-box" href="insert-individual.html">
+      <div class="icon">🧑‍⚕️</div>
+      <span class="tag">กล่องที่ 3</span>
+      <h2>Insert ค่าใช้จ่ายรายคน</h2>
+      <p>เลือก Template และแพทย์ผู้สั่ง พร้อมระบุ VN เพื่อบันทึกค่าใช้จ่ายให้ผู้ป่วยรายบุคคล</p>
+    </a>
+  </div>
+</div>
+
+<script src="js/common.js"></script>
+<script>
+  requireAuthOrRedirect().then((officer) => {
+    if (officer) document.getElementById('officerName').textContent = officer.name;
+  });
+</script>
+</body>
+</html>

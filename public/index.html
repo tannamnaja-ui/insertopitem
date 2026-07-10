@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>เข้าสู่ระบบ | Insert ค่าใช้จ่าย</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="page-center">
+  <div class="card card-sm">
+    <div class="brand">
+      <div class="brand-icon">💊</div>
+      <div>
+        <h1>เข้าสู่ระบบ</h1>
+        <p class="subtitle" style="margin:0;">ระบบ Insert ค่าใช้จ่าย</p>
+      </div>
+    </div>
+
+    <div id="alert" class="alert alert-error"></div>
+
+    <form id="loginForm">
+      <div class="field">
+        <label>Username</label>
+        <input type="text" id="username" autocomplete="username" placeholder="ชื่อผู้ใช้งาน" required>
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input type="password" id="password" autocomplete="current-password" placeholder="รหัสผ่าน" required>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block" id="loginBtn">
+        <span id="loginBtnText">เข้าสู่ระบบ</span>
+      </button>
+    </form>
+
+    <hr class="divider">
+
+    <button type="button" class="btn btn-outline btn-block" id="settingsBtn">
+      ⚙️ ตั้งค่าการเชื่อมต่อ
+    </button>
+  </div>
+</div>
+
+<script src="js/login.js"></script>
+</body>
+</html>
