@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ตั้งค่าค่า DF ที่จะให้ Auto</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div style="padding: 36px 24px;">
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-icon">🧾</div>
+      <div>
+        <h1 style="margin-bottom:0;">ตั้งค่าค่า DF ที่จะให้ Auto</h1>
+        <p class="subtitle" style="margin:0;">ค้นหาและเพิ่มรายการค่า DF แพทย์ที่ต้องการให้เพิ่มอัตโนมัติ</p>
+      </div>
+    </div>
+    <div class="pill">
+      <span id="officerName">-</span>
+      <button class="link-btn" onclick="logout()">ออกจากระบบ</button>
+    </div>
+  </div>
+
+  <a href="insert-df.html" class="back-link" style="max-width:1180px;margin-left:auto;margin-right:auto;display:block;">&larr; กลับ</a>
+
+  <div class="card card-xl" style="margin: 0 auto;">
+    <div id="alert" class="alert"></div>
+
+    <h2>เพิ่มรายการ</h2>
+    <div class="field search-wrap" style="max-width:480px;">
+      <label>ค้นหารายการ (ชื่อ หรือ icode)</label>
+      <input type="text" id="drugSearch" placeholder="พิมพ์ชื่อรายการหรือ icode อย่างน้อย 2 ตัวอักษร">
+      <div class="search-results" id="searchResults"></div>
+    </div>
+
+    <hr class="divider">
+
+    <h2>รายการที่ตั้งค่าไว้</h2>
+    <table id="itemsTable">
+      <thead>
+        <tr><th>icode</th><th>ชื่อรายการ</th><th>ราคา</th><th style="width:80px;"></th></tr>
+      </thead>
+      <tbody id="itemsBody"></tbody>
+    </table>
+    <div id="itemsEmpty" class="empty-state hidden">ยังไม่มีรายการที่ตั้งค่าไว้</div>
+  </div>
+</div>
+
+<script src="js/common.js"></script>
+<script src="js/df-items.js"></script>
+</body>
+</html>

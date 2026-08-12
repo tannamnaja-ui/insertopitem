@@ -58,12 +58,53 @@
 
     <hr class="divider">
 
-    <h3 style="margin-bottom:10px;">ตาราง Template ค่าใช้จ่าย (template_opitem)</h3>
-    <div class="status-line" id="tableStatusLine">
-      <span class="status-dot" id="tableStatusDot"></span>
-      <span id="tableStatusText">กำลังตรวจสอบ...</span>
+    <h3 style="margin-bottom:10px;">API Token</h3>
+    <p class="subtitle" style="margin:0 0 12px;">ทุก request ที่เรียกใช้ API (นอกเหนือจากหน้านี้) ต้องแนบ Token นี้มาด้วย ป้องกันการ copy URL ไปยิงตรงผ่าน Postman</p>
+    <div class="field">
+      <label>รหัสสถานพยาบาล</label>
+      <input type="text" id="hospitalCode" placeholder="เช่น 10670">
     </div>
-    <button type="button" class="btn btn-block btn-gray" id="tableActionBtn" disabled>ตรวจสอบตาราง...</button>
+    <div class="field">
+      <label>Token ปัจจุบัน</label>
+      <input type="text" id="currentToken" placeholder="ยังไม่ได้สร้าง Token" readonly>
+    </div>
+    <button type="button" class="btn btn-block btn-warning" id="genTokenBtn">🔑 สร้าง Token ใหม่</button>
+
+    <hr class="divider">
+
+    <h3 style="margin-bottom:10px;">ตาราง Template ค่าใช้จ่าย (template_opitem)</h3>
+    <div class="status-line" id="tableStatusLine-template_opitem">
+      <span class="status-dot" id="tableStatusDot-template_opitem"></span>
+      <span id="tableStatusText-template_opitem">กำลังตรวจสอบ...</span>
+    </div>
+    <button type="button" class="btn btn-block btn-gray" id="tableActionBtn-template_opitem" disabled>ตรวจสอบตาราง...</button>
+
+    <hr class="divider">
+
+    <h3 style="margin-bottom:10px;">ตารางรายการ DF อัตโนมัติ (app_df_auto)</h3>
+    <div class="status-line" id="tableStatusLine-app_df_auto">
+      <span class="status-dot" id="tableStatusDot-app_df_auto"></span>
+      <span id="tableStatusText-app_df_auto">กำลังตรวจสอบ...</span>
+    </div>
+    <button type="button" class="btn btn-block btn-gray" id="tableActionBtn-app_df_auto" disabled>ตรวจสอบตาราง...</button>
+
+    <hr class="divider">
+
+    <h3 style="margin-bottom:10px;">ตาราง Log การ Insert ค่า DF อัตโนมัติ (app_df_auto_log)</h3>
+    <div class="status-line" id="tableStatusLine-app_df_auto_log">
+      <span class="status-dot" id="tableStatusDot-app_df_auto_log"></span>
+      <span id="tableStatusText-app_df_auto_log">กำลังตรวจสอบ...</span>
+    </div>
+    <button type="button" class="btn btn-block btn-gray" id="tableActionBtn-app_df_auto_log" disabled>ตรวจสอบตาราง...</button>
+
+    <hr class="divider">
+
+    <h3 style="margin-bottom:10px;">ฟิลด์ df_auto ในตาราง kskdepartment</h3>
+    <div class="status-line" id="tableStatusLine-kskdepartment">
+      <span class="status-dot" id="tableStatusDot-kskdepartment"></span>
+      <span id="tableStatusText-kskdepartment">กำลังตรวจสอบ...</span>
+    </div>
+    <button type="button" class="btn btn-block btn-gray" id="tableActionBtn-kskdepartment" disabled>ตรวจสอบตาราง...</button>
   </div>
 </div>
 

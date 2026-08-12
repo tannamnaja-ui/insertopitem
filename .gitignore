@@ -5,3 +5,13 @@ server/data/dbconfig.json
 
 # ข้อมูล Template แบบเก่า (ก่อนย้ายไปเก็บที่ตาราง template_opitem) อาจมีข้อมูลภายในของโรงพยาบาล
 server/data/templates.json
+
+# API Token เฉพาะของแต่ละโรงพยาบาล (secret) ห้าม commit
+server/data/apitoken.json
+
+# สถานะการรัน Insert ค่า DF อัตโนมัติ เป็นข้อมูล runtime เฉพาะเครื่อง ไม่ใช่ source code
+server/data/dfauto-state.json
+
+# ไฟล์ installer ที่ build ไว้ (ไฟล์ใหญ่ มี node.exe/node_modules ฝังอยู่ ไม่ควรเก็บใน git)
+dist/
+installer/

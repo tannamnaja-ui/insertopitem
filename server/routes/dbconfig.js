@@ -2,12 +2,15 @@ const express = require('express');
 const { getDbConfig, saveDbConfig } = require('../dataStore');
 const db = require('../db');
 const schema = require('../schema');
+const requireSettingsAccess = require('../middleware/requireSettingsAccess');
 
 const router = express.Router();
 
+router.use(requireSettingsAccess);
+
 router.get('/', (req, res) => {
   const cfg = getDbConfig();
-  res.json({ ok: true, config: { ...cfg, password: '' } });
+  res.json({ ok: true, config: cfg });
 });
 
 router.post('/test', async (req, res) => {
@@ -39,27 +42,27 @@ router.post('/save', (req, res) => {
   res.json({ ok: true });
 });
 
-router.get('/table-status', async (req, res) => {
+router.get('/table-status/:table', async (req, res) => {
   try {
-    const result = await schema.checkStatus();
+    const result = await schema.checkStatus(req.params.table);
     res.json({ ok: true, ...result });
   } catch (err) {
     res.status(500).json({ ok: false, message: 'ตรวจสอบตารางไม่สำเร็จ: ' + err.message });
   }
 });
 
-router.post('/create-table', async (req, res) => {
+router.post('/create-table/:table', async (req, res) => {
   try {
-    await schema.createTable();
+    await schema.createTable(req.params.table);
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ ok: false, message: 'สร้างตารางไม่สำเร็จ: ' + err.message });
   }
 });
 
-router.post('/add-columns', async (req, res) => {
+router.post('/add-columns/:table', async (req, res) => {
   try {
-    await schema.addMissingColumns();
+    await schema.addMissingColumns(req.params.table);
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ ok: false, message: 'เพิ่มฟิลด์ไม่สำเร็จ: ' + err.message });

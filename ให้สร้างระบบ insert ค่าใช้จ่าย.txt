@@ -58,3 +58,20 @@ staff varchar 30
 ถ้ายังไม่มีให้ปุ่ม เพิ่มตาราง template_opitem เป็นสีส้มสามารถกดได้ แล้วให้สร้างตารางนี้อัตโนมัติ
 แต่ถ้าตรวจสอบแล้วว่ามีตารางนี้ในฐานข้อมูลแล้ว และฟิลครบแล้ว  ให้ปุ่มกดเพิ่มตาราง template_opitem เป็นสีเทา ไม่สามารถกดได้
 หรือถ้ามีตารางแล้ว แต่ฟิลยังไม่ครบ ให้เป็นสีส้ม ชื่อ เพิ่มฟิล
+
+
+template_opitem_id --รันเริ่มจาก 1 ต่อไปเรื่อยๆ
+template_name --นำ ชื่อ Template มาเก็บ
+icode --นำ icode จาก s_drugitems มาเก็บ
+name --นำ name จากคิวรี่มาเก็บ
+shortlist --นำ shortlist จากคิวรี่มาเก็บ
+drugusage --นำ drugusage  จากคิวรี่มาเก็บ
+price --นำ price  จากคิวรี่มาเก็บ
+qty --นำ qty  จากคิวรี่มาเก็บ
+sum_price --นำ sum_price  จากคิวรี่มาเก็บ
+staff --โดยนำ username ไปเทียบกับตาราง officer.officer_login_name แล้วนำ officer.officer_login_name มาใส่
+
+
+
+
+

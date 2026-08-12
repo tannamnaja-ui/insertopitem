@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ตั้งค่าห้องที่ให้คิดค่า DF</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div style="padding: 36px 24px;">
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-icon">⚙️</div>
+      <div>
+        <h1 style="margin-bottom:0;">ตั้งค่าห้องที่ให้คิดค่า DF</h1>
+        <p class="subtitle" style="margin:0;">เลือกห้องที่ต้องการให้คิดค่า DF แพทย์อัตโนมัติ การเปลี่ยนแปลงจะบันทึกทันที</p>
+      </div>
+    </div>
+    <div class="pill">
+      <span id="officerName">-</span>
+      <button class="link-btn" onclick="logout()">ออกจากระบบ</button>
+    </div>
+  </div>
+
+  <a href="insert-df.html" class="back-link" style="max-width:1180px;margin-left:auto;margin-right:auto;display:block;">&larr; กลับ</a>
+
+  <div class="card card-xl" style="margin: 0 auto;">
+    <div id="alert" class="alert"></div>
+
+    <div class="field" style="max-width:360px;">
+      <label>ค้นหาห้อง</label>
+      <input type="text" id="deptSearch" placeholder="พิมพ์ชื่อห้องหรือรหัสห้อง">
+    </div>
+
+    <table id="deptTable">
+      <thead>
+        <tr><th style="width:60px;">คิดค่า DF</th><th>รหัสห้อง</th><th>ชื่อห้อง</th></tr>
+      </thead>
+      <tbody id="deptBody"></tbody>
+    </table>
+    <div id="deptEmpty" class="empty-state hidden">ไม่พบรายชื่อห้อง</div>
+    <div id="deptNoMatch" class="empty-state hidden">ไม่พบห้องที่ตรงกับคำค้นหา</div>
+  </div>
+</div>
+
+<script src="js/common.js"></script>
+<script src="js/df-settings.js"></script>
+</body>
+</html>
