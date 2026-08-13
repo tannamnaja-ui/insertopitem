@@ -1,12 +1,9 @@
 const express = require('express');
 const crypto = require('crypto');
 const db = require('../db');
-const { hasTaskAccess } = require('../permissions');
 const { getApiTokenConfig } = require('../dataStore');
 
 const router = express.Router();
-
-const SETTINGS_ACCESS_TASK_ID = '77';
 
 async function verifyCredentials(username, password) {
   const rows = await db.query(
@@ -46,35 +43,6 @@ router.post('/login', async (req, res) => {
     };
 
     return res.json({ ok: true, officer: req.session.officer });
-  } catch (err) {
-    return res.status(500).json({ ok: false, message: 'เชื่อมต่อฐานข้อมูลไม่สำเร็จ: ' + err.message });
-  }
-});
-
-router.post('/check-settings-access', async (req, res) => {
-  const { username, password } = req.body || {};
-  if (!username || !password) {
-    return res.status(400).json({ ok: false, message: 'กรุณากรอก username และ password' });
-  }
-
-  try {
-    const result = await verifyCredentials(username, password);
-    if (!result.ok) {
-      return res.status(401).json({ ok: false, message: result.message });
-    }
-
-    const allowed = await hasTaskAccess(result.officer.officer_login_name, SETTINGS_ACCESS_TASK_ID);
-
-    if (!allowed) {
-      return res.json({ ok: true, allowed: false, message: 'ไม่มีสิทธิ์เข้าถึงหน้านี้ กรุณาติดต่อ Admin ผู้ดูแลระบบ' });
-    }
-
-    req.session.officer = {
-      username: result.officer.officer_login_name,
-      name: result.officer.officer_name || result.officer.officer_login_name,
-    };
-
-    return res.json({ ok: true, allowed: true });
   } catch (err) {
     return res.status(500).json({ ok: false, message: 'เชื่อมต่อฐานข้อมูลไม่สำเร็จ: ' + err.message });
   }

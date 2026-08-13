@@ -2,11 +2,8 @@ const express = require('express');
 const { getDbConfig, saveDbConfig } = require('../dataStore');
 const db = require('../db');
 const schema = require('../schema');
-const requireSettingsAccess = require('../middleware/requireSettingsAccess');
 
 const router = express.Router();
-
-router.use(requireSettingsAccess);
 
 router.get('/', (req, res) => {
   const cfg = getDbConfig();

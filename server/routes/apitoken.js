@@ -1,11 +1,8 @@
 const express = require('express');
 const crypto = require('crypto');
 const { getApiTokenConfig, saveApiTokenConfig } = require('../dataStore');
-const requireSettingsAccess = require('../middleware/requireSettingsAccess');
 
 const router = express.Router();
-
-router.use(requireSettingsAccess);
 
 function generateDigits(count) {
   let digits = '';
