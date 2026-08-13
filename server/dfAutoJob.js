@@ -1,65 +1,57 @@
 const db = require('./db');
 const { getDfAutoState, saveDfAutoState } = require('./dataStore');
 
-// insert ค่า DF อัตโนมัติ: สำหรับ VN ของวันนี้ที่ main_dep อยู่ในห้องที่ตั้งค่า df_auto='Y'
-// หาแพทย์จากรายการที่คีย์ไว้แล้วใน opitemrece (แพทย์คีย์ยา/รายการแล้ว) และตรวจสอบว่าเป็นแพทย์จริง (มีอยู่ในตาราง doctor)
-// แล้ว insert รายการจาก app_df_auto ให้แพทย์แต่ละคน (เฉพาะคู่ vn+doctor+icode ที่ยังไม่เคย insert)
+// insert ค่า DF อัตโนมัติ: สำหรับ VN ของวันนี้ที่ main_dep ถูกผูกไว้กับรายการ (icode) ใน app_df_item_department
+// (1 ห้องผูกได้หลาย icode, 1 icode ผูกได้หลายห้อง ไม่บังคับ 1 ต่อ 1)
+// หาแพทย์จากตาราง ovst_doctor_sign เฉพาะที่เป็น doctor.position_id='1' เท่านั้น
+// (ถ้าไม่มีแพทย์ position_id='1' ลงนามไว้ จะไม่ดีดค่า DF ให้)
+// แล้ว insert รายการที่ผูกไว้กับห้องนั้นให้แพทย์แต่ละคน (เฉพาะคู่ vn+doctor+icode ที่ยังไม่เคย insert)
 async function runOnce() {
   const summary = { ranAt: new Date().toISOString(), inserted: 0, error: null };
   try {
-    const deps = await db.query(`SELECT depcode FROM kskdepartment WHERE df_auto = 'Y' AND depcode_active = 'Y'`);
-    const depcodes = deps.map((d) => d.depcode);
-    if (!depcodes.length) return summary;
-
-    const items = await db.query(`SELECT icode FROM app_df_auto`);
-    if (!items.length) return summary;
-
-    const depPlaceholders = depcodes.map(() => '?').join(',');
+    const [{ mapped_count: mappedCount } = { mapped_count: 0 }] = await db.query(
+      `SELECT COUNT(*) AS mapped_count FROM app_df_item_department`
+    );
+    if (!Number(mappedCount)) return summary;
 
     const inserted = await db.transaction(async (query) => query(
       `WITH signers AS (
-         SELECT DISTINCT o2.vn, o2.doctor
-         FROM opitemrece o2
-         JOIN doctor doc ON doc.code = o2.doctor
-         WHERE o2.vstdate = CURRENT_DATE
-           AND o2.doctor IS NOT NULL AND o2.doctor <> ''
-           AND (o2.idr IS NULL OR o2.idr <> 'DF_AUTO')
+         SELECT DISTINCT ds.vn, ds.doctor
+         FROM ovst_doctor_sign ds
+         JOIN doctor doc ON doc.code = ds.doctor AND doc.position_id = 1
        ),
        candidates AS MATERIALIZED (
          SELECT
            '{' || UPPER(gen_random_uuid()::TEXT) || '}' AS hos_guid,
            o.vn, o.hn, o.vstdate, o.vsttime, o.pttype, o.main_dep AS dep_code,
            s.doctor,
-           a.icode,
+           idep.icode,
            COALESCE(dg.unitprice, ng.price, 0) AS unitprice,
            COALESCE(sd.income, '') AS income,
-           COALESCE(sd.cost, 0) AS cost,
-           pt.paidst
+           COALESCE(sd.cost, 0) AS cost
          FROM ovst o
          JOIN signers s ON s.vn = o.vn
-         CROSS JOIN app_df_auto a
-         LEFT JOIN s_drugitems sd ON sd.icode = a.icode
-         LEFT JOIN drugitems dg ON dg.icode = a.icode
-         LEFT JOIN nondrugitems ng ON ng.icode = a.icode
-         LEFT JOIN pttype pt ON pt.pttype = o.pttype
+         JOIN app_df_item_department idep ON idep.depcode = o.main_dep
+         LEFT JOIN s_drugitems sd ON sd.icode = idep.icode
+         LEFT JOIN drugitems dg ON dg.icode = idep.icode
+         LEFT JOIN nondrugitems ng ON ng.icode = idep.icode
          LEFT JOIN app_df_auto_log log
-           ON log.vn = o.vn AND log.doctor = s.doctor AND log.icode = a.icode
+           ON log.vn = o.vn AND log.doctor = s.doctor AND log.icode = idep.icode
          WHERE o.vstdate = CURRENT_DATE
-           AND o.main_dep IN (${depPlaceholders})
            AND log.app_df_auto_log_id IS NULL
        ),
        ins AS (
          INSERT INTO opitemrece (hos_guid, vn, hn, icode, qty, drugusage, unitprice, vstdate, vsttime,
              doctor, rxdate, rxtime, dep_code, pttype, income, staff, paidst, last_modified, sum_price, cost, sp_use, idr)
          SELECT hos_guid, vn, hn, icode, 1, '', unitprice, vstdate, vsttime,
-             doctor, vstdate, LOCALTIME(0), dep_code, pttype, income, 'ADD_APP_DF', paidst, LOCALTIMESTAMP(0), unitprice, cost, 'DF_AUTO', 'DF_AUTO'
+             doctor, vstdate, LOCALTIME(0), dep_code, pttype, income, 'ADD_APP_DF', '03', LOCALTIMESTAMP(0), unitprice, cost, 'DF_AUTO', 'DF_AUTO'
          FROM candidates
          RETURNING hos_guid
        )
        INSERT INTO app_df_auto_log (vn, hn, doctor, icode, hos_guid, inserted_at)
        SELECT vn, hn, doctor, icode, hos_guid, LOCALTIMESTAMP(0) FROM candidates
        RETURNING vn`,
-      [...depcodes]
+      []
     ));
 
     summary.inserted = inserted.length;

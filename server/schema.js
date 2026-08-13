@@ -19,12 +19,13 @@ const TABLES = {
       { name: 'cost', mysql: 'DECIMAL(12,2)', pg: 'NUMERIC(12,2)' },
     ],
   },
-  app_df_auto: {
-    name: 'app_df_auto',
+  app_df_item_department: {
+    name: 'app_df_item_department',
     columns: [
-      { name: 'app_df_auto_id', mysql: 'INT(5) AUTO_INCREMENT PRIMARY KEY', pg: 'SERIAL PRIMARY KEY' },
+      { name: 'app_df_item_department_id', mysql: 'INT AUTO_INCREMENT PRIMARY KEY', pg: 'SERIAL PRIMARY KEY' },
       { name: 'icode', mysql: 'VARCHAR(7)', pg: 'VARCHAR(7)' },
       { name: 'name', mysql: 'VARCHAR(250)', pg: 'VARCHAR(250)' },
+      { name: 'depcode', mysql: 'VARCHAR(20)', pg: 'VARCHAR(20)' },
     ],
   },
   app_df_auto_log: {

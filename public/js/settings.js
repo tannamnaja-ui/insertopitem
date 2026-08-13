@@ -9,9 +9,8 @@ const saveBtn = document.getElementById('saveBtn');
 const configForm = document.getElementById('configForm');
 const TABLE_LABELS = {
   template_opitem: 'template_opitem',
-  app_df_auto: 'app_df_auto',
+  app_df_item_department: 'app_df_item_department',
   app_df_auto_log: 'app_df_auto_log',
-  kskdepartment: 'kskdepartment',
 };
 
 let dbType = 'mysql';
@@ -268,13 +267,11 @@ genTokenBtn.addEventListener('click', async () => {
 loadApiToken();
 
 const checkTemplateOpitemStatus = setupTableCheck('template_opitem');
-const checkAppDfAutoStatus = setupTableCheck('app_df_auto');
+const checkAppDfItemDepartmentStatus = setupTableCheck('app_df_item_department');
 const checkAppDfAutoLogStatus = setupTableCheck('app_df_auto_log');
-const checkKskdepartmentStatus = setupTableCheck('kskdepartment');
 
 loadExisting().then(() => {
   checkTemplateOpitemStatus();
-  checkAppDfAutoStatus();
+  checkAppDfItemDepartmentStatus();
   checkAppDfAutoLogStatus();
-  checkKskdepartmentStatus();
 });

@@ -122,6 +122,7 @@ async function loadRegistry() {
         <td>${it.hn}</td>
         <td>${it.name || '-'}</td>
         <td>${it.department || it.depcode || '-'}</td>
+        <td>${it.itemNames || '-'}</td>
         <td>${it.signerCount}</td>
         <td>${STATUS_LABELS[it.status] || it.status}</td>
       </tr>

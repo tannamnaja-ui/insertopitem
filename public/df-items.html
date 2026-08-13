@@ -13,7 +13,7 @@
       <div class="brand-icon">🧾</div>
       <div>
         <h1 style="margin-bottom:0;">ตั้งค่าค่า DF ที่จะให้ Auto</h1>
-        <p class="subtitle" style="margin:0;">ค้นหาและเพิ่มรายการค่า DF แพทย์ที่ต้องการให้เพิ่มอัตโนมัติ</p>
+        <p class="subtitle" style="margin:0;">เลือกรายการค่าธรรมเนียม แล้วผูกกับห้องตรวจที่ต้องคิดค่านี้ได้หลายห้อง — 1 ห้องตรวจก็ผูกได้หลายรายการเช่นกัน</p>
       </div>
     </div>
     <div class="pill">
@@ -27,22 +27,30 @@
   <div class="card card-xl" style="margin: 0 auto;">
     <div id="alert" class="alert"></div>
 
-    <h2>เพิ่มรายการ</h2>
+    <h2>1. เลือกรายการค่าธรรมเนียม</h2>
     <div class="field search-wrap" style="max-width:480px;">
       <label>ค้นหารายการ (ชื่อ หรือ icode)</label>
-      <input type="text" id="drugSearch" placeholder="พิมพ์ชื่อรายการหรือ icode อย่างน้อย 2 ตัวอักษร">
-      <div class="search-results" id="searchResults"></div>
+      <input type="text" id="itemSearch" placeholder="พิมพ์ชื่อรายการหรือ icode อย่างน้อย 2 ตัวอักษร">
+      <div class="search-results" id="itemResults"></div>
+    </div>
+    <div id="selectedItemBox" class="summary-box hidden" style="display:block;">
+      <div>รายการที่เลือก: <strong id="selectedItemName"></strong></div>
+      <input type="hidden" id="selectedItemIcode">
+    </div>
+
+    <div id="deptPickerBox" class="hidden">
+      <h2 style="margin-top:20px;">2. เลือกห้องตรวจที่จะผูกรายการนี้</h2>
+      <div class="field search-wrap" style="max-width:480px;">
+        <label>ค้นหาห้องตรวจ (ชื่อหรือรหัส)</label>
+        <input type="text" id="deptSearch" placeholder="พิมพ์ชื่อห้องตรวจหรือรหัส">
+        <div class="search-results" id="deptResults"></div>
+      </div>
     </div>
 
     <hr class="divider">
 
     <h2>รายการที่ตั้งค่าไว้</h2>
-    <table id="itemsTable">
-      <thead>
-        <tr><th>icode</th><th>ชื่อรายการ</th><th>ราคา</th><th style="width:80px;"></th></tr>
-      </thead>
-      <tbody id="itemsBody"></tbody>
-    </table>
+    <div id="itemsList"></div>
     <div id="itemsEmpty" class="empty-state hidden">ยังไม่มีรายการที่ตั้งค่าไว้</div>
   </div>
 </div>
