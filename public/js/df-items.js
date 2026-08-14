@@ -2,6 +2,7 @@ let configuredItems = [];
 let allDepartments = [];
 let selectedItem = null;
 let itemSearchTimer = null;
+let editingId = null;
 
 const alertBox = document.getElementById('alert');
 const itemSearch = document.getElementById('itemSearch');
@@ -102,8 +103,7 @@ deptSearch.addEventListener('input', () => {
 
 document.addEventListener('click', (e) => {
   if (!e.target.closest('.search-wrap')) {
-    itemResults.classList.remove('show');
-    deptResults.classList.remove('show');
+    document.querySelectorAll('.search-results').forEach((el) => el.classList.remove('show'));
   }
 });
 
@@ -129,9 +129,48 @@ async function bindDepartment(dept) {
   }
 }
 
+async function addDepartmentToItem(icode, name, depcode, deptLabel) {
+  try {
+    const res = await fetch('/api/df-items', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ icode, name, depcode }),
+    });
+    const data = await res.json();
+    if (!data.ok) {
+      showAlert(data.message || 'เพิ่มไม่สำเร็จ', 'error');
+      return;
+    }
+    showAlert(`เพิ่มห้องตรวจ "${deptLabel}" สำเร็จ`, 'success');
+    await loadAll();
+  } catch (err) {
+    showAlert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์', 'error');
+  }
+}
+
 async function removeBinding(id) {
   try {
     await fetch('/api/df-items/' + encodeURIComponent(id), { method: 'DELETE' });
+    await loadAll();
+  } catch (err) {
+    showAlert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์', 'error');
+  }
+}
+
+async function saveEditedDepartment(id, depcode) {
+  try {
+    const res = await fetch('/api/df-items/' + encodeURIComponent(id), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ depcode }),
+    });
+    const data = await res.json();
+    if (!data.ok) {
+      showAlert(data.message || 'แก้ไขไม่สำเร็จ', 'error');
+      return;
+    }
+    editingId = null;
+    showAlert('แก้ไขห้องตรวจสำเร็จ', 'success');
     await loadAll();
   } catch (err) {
     showAlert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์', 'error');
@@ -154,13 +193,101 @@ function renderConfiguredItems() {
         </div>
       </div>
       <div class="items-list">
-        ${it.departments.map((d) => `<span class="item-chip">${d.department || d.depcode} <button data-remove="${d.id}" style="border:none;background:none;cursor:pointer;color:var(--danger);font-weight:700;">×</button></span>`).join('')}
+        ${it.departments.map((d) => (
+          d.id === editingId
+            ? `<span class="item-chip search-wrap" style="padding:4px 8px;">
+                 <input type="text" class="edit-dept-search" data-editing-id="${d.id}" placeholder="ค้นหาห้องตรวจใหม่" style="border:none;background:none;padding:2px;min-width:180px;" autofocus>
+                 <div class="search-results edit-dept-results"></div>
+                 <button data-cancel-edit style="border:none;background:none;cursor:pointer;color:var(--ink-soft);font-weight:700;">×</button>
+               </span>`
+            : `<span class="item-chip">${d.department || d.depcode} <button data-edit="${d.id}" style="border:none;background:none;cursor:pointer;color:var(--green-600);font-weight:700;">✏️</button><button data-remove="${d.id}" style="border:none;background:none;cursor:pointer;color:var(--danger);font-weight:700;">×</button></span>`
+        )).join('')}
+      </div>
+      <div class="field search-wrap" style="max-width:320px;margin:12px 0 0;">
+        <input type="text" class="add-dept-search" data-icode="${it.icode}" data-name="${it.name.replace(/"/g, '&quot;')}" placeholder="+ ค้นหาห้องตรวจเพื่อเพิ่มให้รายการนี้">
+        <div class="search-results add-dept-results"></div>
       </div>
     </div>
   `).join('');
 
   itemsList.querySelectorAll('[data-remove]').forEach((btn) => {
     btn.addEventListener('click', () => removeBinding(btn.dataset.remove));
+  });
+  itemsList.querySelectorAll('[data-edit]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      editingId = btn.dataset.edit;
+      renderConfiguredItems();
+    });
+  });
+  itemsList.querySelectorAll('[data-cancel-edit]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      editingId = null;
+      renderConfiguredItems();
+    });
+  });
+  itemsList.querySelectorAll('.edit-dept-search').forEach((input) => {
+    input.focus();
+    input.addEventListener('input', () => {
+      const q = input.value.trim().toLowerCase();
+      const resultsBox = input.parentElement.querySelector('.edit-dept-results');
+      if (!q) {
+        resultsBox.classList.remove('show');
+        return;
+      }
+      const matches = allDepartments.filter((d) =>
+        (d.department || '').toLowerCase().includes(q) || (d.depcode || '').toLowerCase().includes(q)
+      ).slice(0, 20);
+      if (!matches.length) {
+        resultsBox.innerHTML = '<div class="search-item">ไม่พบห้องตรวจ</div>';
+        resultsBox.classList.add('show');
+        return;
+      }
+      resultsBox.innerHTML = matches.map((d, idx) => `
+        <div class="search-item" data-idx="${idx}">
+          <div>${d.department}</div>
+          <div class="icode">${d.depcode}</div>
+        </div>
+      `).join('');
+      resultsBox.classList.add('show');
+      Array.from(resultsBox.querySelectorAll('[data-idx]')).forEach((el, idx) => {
+        el.addEventListener('click', () => saveEditedDepartment(input.dataset.editingId, matches[idx].depcode));
+      });
+    });
+  });
+
+  itemsList.querySelectorAll('.add-dept-search').forEach((input) => {
+    input.addEventListener('input', () => {
+      const q = input.value.trim().toLowerCase();
+      const resultsBox = input.parentElement.querySelector('.add-dept-results');
+      if (!q) {
+        resultsBox.classList.remove('show');
+        return;
+      }
+      const alreadyBound = configuredItems.find((it) => it.icode === input.dataset.icode)?.departments.map((d) => d.depcode) || [];
+      const matches = allDepartments.filter((d) =>
+        !alreadyBound.includes(d.depcode) &&
+        ((d.department || '').toLowerCase().includes(q) || (d.depcode || '').toLowerCase().includes(q))
+      ).slice(0, 20);
+      if (!matches.length) {
+        resultsBox.innerHTML = '<div class="search-item">ไม่พบห้องตรวจ (หรือถูกเพิ่มไปแล้ว)</div>';
+        resultsBox.classList.add('show');
+        return;
+      }
+      resultsBox.innerHTML = matches.map((d, idx) => `
+        <div class="search-item" data-idx="${idx}">
+          <div>${d.department}</div>
+          <div class="icode">${d.depcode}</div>
+        </div>
+      `).join('');
+      resultsBox.classList.add('show');
+      Array.from(resultsBox.querySelectorAll('[data-idx]')).forEach((el, idx) => {
+        el.addEventListener('click', () => {
+          input.value = '';
+          resultsBox.classList.remove('show');
+          addDepartmentToItem(input.dataset.icode, input.dataset.name, matches[idx].depcode, matches[idx].department);
+        });
+      });
+    });
   });
 }
 

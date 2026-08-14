@@ -56,6 +56,34 @@ router.post('/', requireAuth, async (req, res) => {
   }
 });
 
+// แก้ไขห้องตรวจของ binding ที่มีอยู่แล้ว (icode เดิมไม่เปลี่ยน)
+router.put('/:id', requireAuth, async (req, res) => {
+  const { depcode } = req.body || {};
+  if (!depcode) {
+    return res.status(400).json({ ok: false, message: 'กรุณาเลือกห้องตรวจ' });
+  }
+  try {
+    const [current] = await db.query(
+      `SELECT icode FROM app_df_item_department WHERE app_df_item_department_id = ?`,
+      [req.params.id]
+    );
+    if (!current) {
+      return res.status(404).json({ ok: false, message: 'ไม่พบรายการนี้' });
+    }
+    const existing = await db.query(
+      `SELECT app_df_item_department_id FROM app_df_item_department WHERE icode = ? AND depcode = ? AND app_df_item_department_id <> ?`,
+      [current.icode, depcode, req.params.id]
+    );
+    if (existing.length > 0) {
+      return res.status(400).json({ ok: false, message: 'รายการนี้ถูกผูกกับห้องนี้อยู่แล้ว' });
+    }
+    await db.query(`UPDATE app_df_item_department SET depcode = ? WHERE app_df_item_department_id = ?`, [depcode, req.params.id]);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ ok: false, message: 'แก้ไขรายการไม่สำเร็จ: ' + err.message });
+  }
+});
+
 router.delete('/:id', requireAuth, async (req, res) => {
   try {
     await db.query(`DELETE FROM app_df_item_department WHERE app_df_item_department_id = ?`, [req.params.id]);

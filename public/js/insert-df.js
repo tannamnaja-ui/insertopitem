@@ -5,6 +5,7 @@ const lastRunText = document.getElementById('lastRunText');
 const toggleBtn = document.getElementById('toggleBtn');
 const runNowBtn = document.getElementById('runNowBtn');
 const statusFilter = document.getElementById('statusFilter');
+const registryDate = document.getElementById('registryDate');
 const registryBody = document.getElementById('registryBody');
 const registryEmpty = document.getElementById('registryEmpty');
 
@@ -100,10 +101,17 @@ runNowBtn.addEventListener('click', async () => {
   }
 });
 
+function todayLocalDateStr() {
+  const now = new Date();
+  const offsetMs = now.getTimezoneOffset() * 60 * 1000;
+  return new Date(now.getTime() - offsetMs).toISOString().slice(0, 10);
+}
+
 async function loadRegistry() {
   try {
     const status = statusFilter.value;
-    const res = await fetch('/api/dfauto/registry?status=' + encodeURIComponent(status));
+    const date = registryDate.value || todayLocalDateStr();
+    const res = await fetch('/api/dfauto/registry?status=' + encodeURIComponent(status) + '&date=' + encodeURIComponent(date));
     const data = await res.json();
     if (!data.ok) {
       showAlert(data.message || 'โหลดทะเบียนไม่สำเร็จ', 'error');
@@ -133,10 +141,12 @@ async function loadRegistry() {
 }
 
 statusFilter.addEventListener('change', loadRegistry);
+registryDate.addEventListener('change', loadRegistry);
 
 requireAuthOrRedirect().then((officer) => {
   if (officer) {
     document.getElementById('officerName').textContent = officer.name;
+    registryDate.value = todayLocalDateStr();
     loadStatus();
     loadRegistry();
     setInterval(loadStatus, 60 * 1000);

@@ -1,6 +1,23 @@
 const db = require('./db');
 const { getDfAutoState, saveDfAutoState } = require('./dataStore');
 
+const AUTO_STAFF_LOGIN = 'auto_auto';
+
+// เช็คว่ามี officer login 'auto_auto' ไว้เป็นผู้บันทึกของรายการ insert อัตโนมัติหรือยัง ถ้ายังไม่มีให้สร้างให้
+async function ensureAutoOfficer() {
+  const existing = await db.query(
+    `SELECT officer_id FROM officer WHERE officer_login_name = ?`,
+    [AUTO_STAFF_LOGIN]
+  );
+  if (existing.length > 0) return;
+
+  const [{ next_id: officerId }] = await db.query(`SELECT get_serialnumber('officer_id') AS next_id`);
+  await db.query(
+    `INSERT INTO officer (officer_id, officer_name, officer_login_name, officer_active) VALUES (?, ?, ?, ?)`,
+    [officerId, 'ระบบ Insert ค่า DF อัตโนมัติ', AUTO_STAFF_LOGIN, 'Y']
+  );
+}
+
 // insert ค่า DF อัตโนมัติ: สำหรับ VN ของวันนี้ที่ main_dep ถูกผูกไว้กับรายการ (icode) ใน app_df_item_department
 // (1 ห้องผูกได้หลาย icode, 1 icode ผูกได้หลายห้อง ไม่บังคับ 1 ต่อ 1)
 // หาแพทย์จากตาราง ovst_doctor_sign เฉพาะที่เป็น doctor.position_id='1' เท่านั้น
@@ -13,6 +30,8 @@ async function runOnce() {
       `SELECT COUNT(*) AS mapped_count FROM app_df_item_department`
     );
     if (!Number(mappedCount)) return summary;
+
+    await ensureAutoOfficer();
 
     const inserted = await db.transaction(async (query) => query(
       `WITH signers AS (
@@ -44,7 +63,7 @@ async function runOnce() {
          INSERT INTO opitemrece (hos_guid, vn, hn, icode, qty, drugusage, unitprice, vstdate, vsttime,
              doctor, rxdate, rxtime, dep_code, pttype, income, staff, paidst, last_modified, sum_price, cost, sp_use, idr)
          SELECT hos_guid, vn, hn, icode, 1, '', unitprice, vstdate, vsttime,
-             doctor, vstdate, LOCALTIME(0), dep_code, pttype, income, 'ADD_APP_DF', '03', LOCALTIMESTAMP(0), unitprice, cost, 'DF_AUTO', 'DF_AUTO'
+             doctor, vstdate, LOCALTIME(0), dep_code, pttype, income, 'auto_auto', '03', LOCALTIMESTAMP(0), unitprice, cost, 'DF_AUTO', 'DF_AUTO'
          FROM candidates
          RETURNING hos_guid
        )

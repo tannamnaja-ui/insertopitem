@@ -29,6 +29,8 @@ router.post('/run-now', requireAuth, async (req, res) => {
 
 router.get('/registry', requireAuth, async (req, res) => {
   try {
+    const dateParam = /^\d{4}-\d{2}-\d{2}$/.test(req.query.date || '') ? req.query.date : null;
+
     const rows = await db.query(
       `SELECT o.vn, o.hn, p.pname, p.fname, p.lname, o.main_dep, dep.department,
            STRING_AGG(DISTINCT idep.name, ', ') AS item_names,
@@ -45,9 +47,10 @@ router.get('/registry', requireAuth, async (req, res) => {
          JOIN doctor doc ON doc.code = ds.doctor AND doc.position_id = 1
        ) s ON s.vn = o.vn
        LEFT JOIN app_df_auto_log log ON log.vn = o.vn AND log.doctor = s.doctor
-       WHERE o.vstdate = CURRENT_DATE
+       WHERE o.vstdate = ${dateParam ? '?' : 'CURRENT_DATE'}
        GROUP BY o.vn, o.hn, p.pname, p.fname, p.lname, o.main_dep, dep.department
-       ORDER BY o.vn`
+       ORDER BY o.vn`,
+      dateParam ? [dateParam] : []
     );
 
     const items = rows.map((r) => {

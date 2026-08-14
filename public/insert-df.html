@@ -13,7 +13,7 @@
       <div class="brand-icon">💰</div>
       <div>
         <h1 style="margin-bottom:0;">เพิ่มค่า DF แพทย์ อัตโนมัติ</h1>
-        <p class="subtitle" style="margin:0;">ทะเบียนผู้ป่วยห้องที่ตั้งค่า DF ของวันนี้ พร้อมสถานะการ insert อัตโนมัติ</p>
+        <p class="subtitle" style="margin:0;">ทะเบียนผู้ป่วยห้องที่ตั้งค่า DF พร้อมสถานะการ insert อัตโนมัติ ดูย้อนหลังได้</p>
       </div>
     </div>
     <div class="pill">
@@ -52,17 +52,23 @@
 
     <div class="row" style="align-items:flex-end;margin-bottom:8px;">
       <div>
-        <h2 style="margin-bottom:4px;">ทะเบียนผู้ป่วยวันนี้</h2>
+        <h2 style="margin-bottom:4px;">ทะเบียนผู้ป่วย</h2>
         <p class="subtitle" style="margin:0;">เฉพาะห้องที่ตั้งค่าคิดค่า DF</p>
       </div>
-      <div class="field" style="max-width:220px;margin-bottom:0;">
-        <label>สถานะ</label>
-        <select id="statusFilter">
-          <option value="all">ทั้งหมด</option>
-          <option value="done">เพิ่มครบทุกแพทย์แล้ว</option>
-          <option value="pending">ยังไม่ครบทุกแพทย์</option>
-          <option value="no_signer">ไม่มีแพทย์ตรวจ</option>
-        </select>
+      <div style="display:flex; gap:14px; flex-wrap:wrap;">
+        <div class="field" style="max-width:180px;margin-bottom:0;">
+          <label>วันที่</label>
+          <input type="date" id="registryDate">
+        </div>
+        <div class="field" style="max-width:220px;margin-bottom:0;">
+          <label>สถานะ</label>
+          <select id="statusFilter">
+            <option value="all">ทั้งหมด</option>
+            <option value="done">เพิ่มครบทุกแพทย์แล้ว</option>
+            <option value="pending">ยังไม่ครบทุกแพทย์</option>
+            <option value="no_signer">ไม่มีแพทย์ตรวจ</option>
+          </select>
+        </div>
       </div>
     </div>
 
