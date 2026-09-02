@@ -61,6 +61,29 @@ const TABLES = {
       { name: 'inserted_at', mysql: 'DATETIME', pg: 'TIMESTAMP' },
     ],
   },
+  app_icd10_opi_item: {
+    name: 'app_icd10_opi_item',
+    columns: [
+      { name: 'app_icd10_opi_item_id', mysql: 'INT AUTO_INCREMENT PRIMARY KEY', pg: 'SERIAL PRIMARY KEY' },
+      { name: 'icode', mysql: 'VARCHAR(7)', pg: 'VARCHAR(7)' },
+      { name: 'name', mysql: 'VARCHAR(250)', pg: 'VARCHAR(250)' },
+      { name: 'icd10', mysql: 'VARCHAR(10)', pg: 'VARCHAR(10)' },
+      { name: 'diagtype', mysql: 'VARCHAR(2)', pg: 'VARCHAR(2)' },
+      { name: 'doctor_mode', mysql: 'VARCHAR(10)', pg: 'VARCHAR(10)' },
+      { name: 'doctor', mysql: 'VARCHAR(20)', pg: 'VARCHAR(20)' },
+    ],
+  },
+  app_icd10_auto_log: {
+    name: 'app_icd10_auto_log',
+    columns: [
+      { name: 'app_icd10_auto_log_id', mysql: 'INT AUTO_INCREMENT PRIMARY KEY', pg: 'SERIAL PRIMARY KEY' },
+      { name: 'vn', mysql: 'VARCHAR(20)', pg: 'VARCHAR(20)' },
+      { name: 'hn', mysql: 'VARCHAR(20)', pg: 'VARCHAR(20)' },
+      { name: 'icode', mysql: 'VARCHAR(7)', pg: 'VARCHAR(7)' },
+      { name: 'icd10', mysql: 'VARCHAR(10)', pg: 'VARCHAR(10)' },
+      { name: 'inserted_at', mysql: 'DATETIME', pg: 'TIMESTAMP' },
+    ],
+  },
   kskdepartment: {
     name: 'kskdepartment',
     alterOnly: true,

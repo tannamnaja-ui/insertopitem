@@ -107,7 +107,9 @@ runNowBtn.addEventListener('click', async () => {
     });
     const data = await res.json();
     if (data.ok) {
-      if (data.summary.error) {
+      if (data.summary.skipped) {
+        showAlert('รอบก่อนหน้ายังทำงานไม่เสร็จ ระบบข้ามรอบนี้ไปเพื่อไม่ให้เพิ่มรายการซ้ำ', 'error');
+      } else if (data.summary.error) {
         showAlert('รันแล้ว แต่เกิดข้อผิดพลาด: ' + data.summary.error, 'error');
       } else {
         showAlert(`รันเสร็จแล้ว เพิ่มรายการใหม่ ${data.summary.inserted} รายการ`, 'success');

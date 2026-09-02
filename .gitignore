@@ -18,3 +18,6 @@ installer/
 
 # สถานะการรัน Insert ค่าบริการอัตโนมัติ เป็นข้อมูล runtime เฉพาะเครื่อง ไม่ใช่ source code
 server/data/opiauto-state.json
+
+# สถานะการรัน Insert ICD10 อัตโนมัติ เป็นข้อมูล runtime เฉพาะเครื่อง ไม่ใช่ source code
+server/data/icd10auto-state.json

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>เมนูหลัก | Insert ค่าใช้จ่าย</title>
+<title>เมนูหลัก | Insert ข้อมูลอัตโนมัติ</title>
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -20,6 +20,11 @@
       <span id="officerName">-</span>
       <button class="link-btn" onclick="logout()">ออกจากระบบ</button>
     </div>
+  </div>
+
+  <div class="status-line" id="autoSummary" style="max-width:1180px;margin:0 auto 18px;font-size:13px;">
+    <span class="status-dot"></span>
+    <span id="autoSummaryText">กำลังตรวจสอบสถานะการทำงานอัตโนมัติ...</span>
   </div>
 
   <div class="menu-grid">
@@ -45,25 +50,86 @@
     </a>
 
     <a class="menu-box" href="insert-df.html">
+      <span class="auto-badge unknown" id="autoBadge-df"><span class="status-dot"></span><span class="label">กำลังตรวจสอบ</span></span>
       <div class="icon">💰</div>
       <span class="tag">กล่องที่ 4</span>
-      <h2>เพิ่มค่า DF แพทย์ อัตโนมัติ</h2>
-      <p>เพิ่มค่า DF แพทย์ให้อัตโนมัติ</p>
+      <h2>เพิ่มค่า DF แพทย์ <span class="auto-word">อัตโนมัติ</span></h2>
+      <p>เพิ่มค่า DF แพทย์ให้<span class="auto-word">อัตโนมัติ</span></p>
     </a>
 
     <a class="menu-box" href="insert-opiauto.html">
+      <span class="auto-badge unknown" id="autoBadge-opi"><span class="status-dot"></span><span class="label">กำลังตรวจสอบ</span></span>
       <div class="icon">🧮</div>
       <span class="tag">กล่องที่ 5</span>
-      <h2>เพิ่มค่าบริการ อัตโนมัติ</h2>
-      <p>เพิ่มค่าบริการให้ผู้ป่วยตามห้องตรวจที่ตั้งค่าไว้โดยอัตโนมัติ</p>
+      <h2>เพิ่มค่าบริการ <span class="auto-word">อัตโนมัติ</span></h2>
+      <p>เพิ่มค่าบริการให้ผู้ป่วยตามห้องตรวจที่ตั้งค่าไว้โดย<span class="auto-word">อัตโนมัติ</span></p>
+    </a>
+
+    <a class="menu-box" href="insert-icd10formopi.html">
+      <span class="auto-badge unknown" id="autoBadge-icd10"><span class="status-dot"></span><span class="label">กำลังตรวจสอบ</span></span>
+      <div class="icon">🩺</div>
+      <span class="tag">กล่องที่ 6</span>
+      <h2>เพิ่ม ICD10 <span class="auto-word">อัตโนมัติ</span>ตามค่าบริการ</h2>
+      <p>ลงรหัสวินิจฉัย ICD10 ให้ผู้ป่วยโดย<span class="auto-word">อัตโนมัติ</span> ตามรายการค่าบริการที่ผูกรหัสไว้</p>
     </a>
   </div>
 </div>
 
 <script src="js/common.js"></script>
 <script>
+  // งานอัตโนมัติทุกตัวทำงานพร้อมกันได้ แต่ละตัวมีสถานะเปิด/ปิดของตัวเอง
+  const AUTO_BOXES = [
+    { key: 'df',  name: 'ค่า DF แพทย์',  statusUrl: '/api/dfauto/status' },
+    { key: 'opi', name: 'ค่าบริการ',     statusUrl: '/api/opiauto/status' },
+    { key: 'icd10', name: 'ICD10 ตามค่าบริการ', statusUrl: '/api/icd10auto/status' },
+  ];
+
+  function renderBadge(key, state) {
+    const badge = document.getElementById('autoBadge-' + key);
+    if (!badge) return;
+    const label = badge.querySelector('.label');
+    if (state === null) {
+      badge.className = 'auto-badge unknown';
+      label.textContent = 'ตรวจสอบไม่ได้';
+      return;
+    }
+    badge.className = 'auto-badge ' + (state ? 'on' : 'off');
+    label.textContent = state ? 'อัตโนมัติ: เปิด' : 'อัตโนมัติ: ปิด';
+  }
+
+  async function loadAutoStatuses() {
+    const results = await Promise.all(AUTO_BOXES.map(async (box) => {
+      try {
+        const res = await fetch(box.statusUrl);
+        const data = await res.json();
+        return data.ok ? Boolean(data.state.enabled) : null;
+      } catch (err) {
+        return null;
+      }
+    }));
+
+    results.forEach((enabled, i) => renderBadge(AUTO_BOXES[i].key, enabled));
+
+    const summary = document.getElementById('autoSummary');
+    const summaryText = document.getElementById('autoSummaryText');
+    const onNames = AUTO_BOXES.filter((b, i) => results[i] === true).map((b) => b.name);
+    const dot = summary.querySelector('.status-dot');
+
+    if (onNames.length === 0) {
+      dot.className = 'status-dot missing';
+      summaryText.textContent = 'ยังไม่ได้เปิดการทำงานอัตโนมัติไว้เลย';
+    } else {
+      dot.className = 'status-dot complete';
+      summaryText.innerHTML = 'เปิดอัตโนมัติอยู่ ' + onNames.length + ' รายการ ทำงานพร้อมกันทุกๆ 5 นาที: <strong>' + onNames.join(' + ') + '</strong>';
+    }
+  }
+
   requireAuthOrRedirect().then((officer) => {
-    if (officer) document.getElementById('officerName').textContent = officer.name;
+    if (officer) {
+      document.getElementById('officerName').textContent = officer.name;
+      loadAutoStatuses();
+      setInterval(loadAutoStatuses, 60 * 1000);
+    }
   });
 </script>
 </body>

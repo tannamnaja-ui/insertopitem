@@ -1,29 +1,22 @@
 const db = require('./db');
 const { getDfAutoState, saveDfAutoState } = require('./dataStore');
-
-const AUTO_STAFF_LOGIN = 'auto_auto';
-
-// เช็คว่ามี officer login 'auto_auto' ไว้เป็นผู้บันทึกของรายการ insert อัตโนมัติหรือยัง ถ้ายังไม่มีให้สร้างให้
-async function ensureAutoOfficer() {
-  const existing = await db.query(
-    `SELECT officer_id FROM officer WHERE officer_login_name = ?`,
-    [AUTO_STAFF_LOGIN]
-  );
-  if (existing.length > 0) return;
-
-  const [{ next_id: officerId }] = await db.query(`SELECT get_serialnumber('officer_id') AS next_id`);
-  await db.query(
-    `INSERT INTO officer (officer_id, officer_name, officer_login_name, officer_active) VALUES (?, ?, ?, ?)`,
-    [officerId, 'ระบบ Insert ค่า DF อัตโนมัติ', AUTO_STAFF_LOGIN, 'Y']
-  );
-}
+const { ensureAutoOfficer } = require('./autoStaff');
 
 // insert ค่า DF อัตโนมัติ: สำหรับ VN ของวันนี้ที่ main_dep ถูกผูกไว้กับรายการ (icode) ใน app_df_item_department
 // (1 ห้องผูกได้หลาย icode, 1 icode ผูกได้หลายห้อง ไม่บังคับ 1 ต่อ 1)
 // หาแพทย์จากตาราง ovst_doctor_sign เฉพาะที่เป็น doctor.position_id='1' เท่านั้น
 // (ถ้าไม่มีแพทย์ position_id='1' ลงนามไว้ จะไม่ดีดค่า DF ให้)
 // แล้ว insert รายการที่ผูกไว้กับห้องนั้นให้แพทย์แต่ละคน (เฉพาะคู่ vn+doctor+icode ที่ยังไม่เคย insert)
+let running = false;
+
 async function runOnce() {
+  // ถ้ารอบก่อนหน้ายังทำงานไม่จบ ให้ข้ามรอบนี้ไป ไม่งั้นสองรอบจะมองไม่เห็นการ insert ของกันและกัน
+  // แล้วเพิ่มรายการซ้ำให้ผู้ป่วยคนเดียวกัน
+  if (running) {
+    return { ranAt: new Date().toISOString(), inserted: 0, error: null, skipped: true };
+  }
+  running = true;
+
   const summary = { ranAt: new Date().toISOString(), inserted: 0, error: null };
   try {
     const [{ mapped_count: mappedCount } = { mapped_count: 0 }] = await db.query(
@@ -76,6 +69,8 @@ async function runOnce() {
     summary.inserted = inserted.length;
   } catch (err) {
     summary.error = err.message;
+  } finally {
+    running = false;
   }
 
   const state = getDfAutoState();
@@ -86,12 +81,19 @@ async function runOnce() {
 
 let timer = null;
 
-function startScheduler() {
+// งานอัตโนมัติแต่ละตัวมี timer ของตัวเอง จึงทำงานพร้อมกันได้โดยไม่ต้องรอกัน
+// offsetMs ใช้เหลื่อมเวลาเริ่ม เพื่อไม่ให้ทุกงานยิงคำสั่งใหญ่เข้าฐานข้อมูลพร้อมกันเป๊ะ ๆ ทุก 5 นาที
+function startScheduler({ offsetMs = 0 } = {}) {
   if (timer) return;
-  timer = setInterval(() => {
+  const tick = () => {
     const state = getDfAutoState();
     if (state.enabled) runOnce().catch(() => {});
-  }, 5 * 60 * 1000);
+  };
+  setTimeout(() => {
+    if (timer) return;
+    timer = setInterval(tick, 5 * 60 * 1000);
+    tick();
+  }, offsetMs);
 }
 
 module.exports = { runOnce, startScheduler };

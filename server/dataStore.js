@@ -4,6 +4,7 @@ const path = require('path');
 const DB_CONFIG_PATH = path.join(__dirname, 'data', 'dbconfig.json');
 const DF_AUTO_STATE_PATH = path.join(__dirname, 'data', 'dfauto-state.json');
 const OPI_AUTO_STATE_PATH = path.join(__dirname, 'data', 'opiauto-state.json');
+const ICD10_AUTO_STATE_PATH = path.join(__dirname, 'data', 'icd10auto-state.json');
 const API_TOKEN_PATH = path.join(__dirname, 'data', 'apitoken.json');
 
 function readJson(filePath, fallback) {
@@ -45,6 +46,14 @@ function saveOpiAutoState(state) {
   writeJson(OPI_AUTO_STATE_PATH, state);
 }
 
+function getIcd10AutoState() {
+  return readJson(ICD10_AUTO_STATE_PATH, { enabled: false, lastRun: null });
+}
+
+function saveIcd10AutoState(state) {
+  writeJson(ICD10_AUTO_STATE_PATH, state);
+}
+
 function getApiTokenConfig() {
   return readJson(API_TOKEN_PATH, { hospitalCode: '', token: '' });
 }
@@ -60,6 +69,8 @@ module.exports = {
   saveDfAutoState,
   getOpiAutoState,
   saveOpiAutoState,
+  getIcd10AutoState,
+  saveIcd10AutoState,
   getApiTokenConfig,
   saveApiTokenConfig,
 };
