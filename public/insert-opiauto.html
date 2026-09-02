@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>เพิ่มค่าบริการ อัตโนมัติ</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div style="padding: 36px 24px;">
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-icon">🧮</div>
+      <div>
+        <h1 style="margin-bottom:0;">เพิ่มค่าบริการ อัตโนมัติ</h1>
+        <p class="subtitle" style="margin:0;">ทะเบียนผู้ป่วยห้องที่ตั้งค่าค่าบริการ พร้อมสถานะการ insert อัตโนมัติ ดูย้อนหลังได้</p>
+      </div>
+    </div>
+    <div class="pill">
+      <span id="officerName">-</span>
+      <button class="link-btn" onclick="logout()">ออกจากระบบ</button>
+    </div>
+  </div>
+
+  <a href="menu.html" class="back-link" style="max-width:1180px;margin-left:auto;margin-right:auto;display:block;">&larr; กลับไปหน้าเมนูหลัก</a>
+
+  <div class="card card-xl" style="margin: 0 auto;">
+    <div id="alert" class="alert"></div>
+
+    <div class="row" style="margin-bottom:20px;">
+      <a href="opiauto-items.html" class="btn btn-secondary">🧾 ตั้งค่าค่าบริการที่จะให้ Auto</a>
+    </div>
+
+    <hr class="divider">
+
+    <div class="row" style="align-items:flex-start;">
+      <div>
+        <h2>Insert อัตโนมัติทุก 5 นาที</h2>
+        <p class="subtitle" style="margin:0 0 6px;">ตัวจับเวลาอัตโนมัติทำงานเฉพาะ<strong>วันปัจจุบัน</strong>เสมอ (เลื่อนตามปฏิทินเอง) — ถ้าต้องการเจาะจงห้องตรวจหรือ insert ย้อนหลัง ให้เลือกห้องและช่วงวันที่ด้านล่างแล้วกดปุ่มรัน</p>
+        <div class="status-line" id="autoStatusLine">
+          <span class="status-dot" id="autoStatusDot"></span>
+          <span id="autoStatusText">กำลังตรวจสอบ...</span>
+        </div>
+        <div id="lastRunText" style="font-size:12.5px;color:var(--ink-soft);margin-bottom:14px;"></div>
+      </div>
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <button type="button" class="btn btn-secondary btn-sm" id="toggleBtn">เปิดใช้งาน</button>
+        <button type="button" class="btn btn-outline btn-sm" id="runNowBtn">▶️ รันตามเงื่อนไขที่เลือก</button>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="row" style="align-items:flex-end;flex-wrap:wrap;margin-bottom:8px;">
+      <div style="flex:0 0 auto;min-width:160px;">
+        <h2 style="margin-bottom:4px;">ทะเบียนผู้ป่วย</h2>
+        <p class="subtitle" style="margin:0;">เฉพาะห้องที่ตั้งค่าคิดค่าบริการ</p>
+      </div>
+      <div class="field" style="flex:1 1 200px;min-width:150px;margin-bottom:0;">
+        <label>ห้องตรวจ</label>
+        <select id="deptFilter">
+          <option value="">ทุกห้องที่ตั้งค่าไว้</option>
+        </select>
+      </div>
+      <div class="field" style="flex:0 0 148px;margin-bottom:0;">
+        <label>ตั้งแต่วันที่</label>
+        <input type="date" id="registryDateFrom">
+      </div>
+      <div class="field" style="flex:0 0 148px;margin-bottom:0;">
+        <label>ถึงวันที่</label>
+        <input type="date" id="registryDateTo">
+      </div>
+      <div class="field" style="flex:0 0 auto;margin-bottom:0;">
+        <button type="button" class="btn btn-outline btn-sm" id="resetDateBtn">วันนี้</button>
+      </div>
+      <div class="field" style="flex:1 1 190px;min-width:150px;margin-bottom:0;">
+        <label>สถานะ</label>
+        <select id="statusFilter">
+          <option value="all">ทั้งหมด</option>
+          <option value="done">เพิ่มครบทุกรายการแล้ว</option>
+          <option value="pending">ยังไม่ครบทุกรายการ</option>
+        </select>
+      </div>
+    </div>
+
+    <table id="registryTable">
+      <thead>
+        <tr><th>วันที่</th><th>VN</th><th>HN</th><th>ชื่อ-สกุล</th><th>ห้อง</th><th>รายการค่าบริการ</th><th>เพิ่มแล้ว</th><th>สถานะ</th></tr>
+      </thead>
+      <tbody id="registryBody"></tbody>
+    </table>
+    <div id="registryEmpty" class="empty-state hidden">ไม่พบรายชื่อผู้ป่วยตามเงื่อนไข</div>
+  </div>
+</div>
+
+<script src="js/common.js"></script>
+<script src="js/insert-opiauto.js"></script>
+</body>
+</html>

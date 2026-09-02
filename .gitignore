@@ -15,3 +15,6 @@ server/data/dfauto-state.json
 # ไฟล์ installer ที่ build ไว้ (ไฟล์ใหญ่ มี node.exe/node_modules ฝังอยู่ ไม่ควรเก็บใน git)
 dist/
 installer/
+
+# สถานะการรัน Insert ค่าบริการอัตโนมัติ เป็นข้อมูล runtime เฉพาะเครื่อง ไม่ใช่ source code
+server/data/opiauto-state.json

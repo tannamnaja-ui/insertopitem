@@ -11,6 +11,8 @@ const TABLE_LABELS = {
   template_opitem: 'template_opitem',
   app_df_item_department: 'app_df_item_department',
   app_df_auto_log: 'app_df_auto_log',
+  app_opiauto_item_department: 'app_opiauto_item_department',
+  app_opiauto_log: 'app_opiauto_log',
 };
 
 let dbType = 'mysql';
@@ -269,9 +271,13 @@ loadApiToken();
 const checkTemplateOpitemStatus = setupTableCheck('template_opitem');
 const checkAppDfItemDepartmentStatus = setupTableCheck('app_df_item_department');
 const checkAppDfAutoLogStatus = setupTableCheck('app_df_auto_log');
+const checkAppOpiAutoItemDepartmentStatus = setupTableCheck('app_opiauto_item_department');
+const checkAppOpiAutoLogStatus = setupTableCheck('app_opiauto_log');
 
 loadExisting().then(() => {
   checkTemplateOpitemStatus();
   checkAppDfItemDepartmentStatus();
   checkAppDfAutoLogStatus();
+  checkAppOpiAutoItemDepartmentStatus();
+  checkAppOpiAutoLogStatus();
 });

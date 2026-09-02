@@ -40,6 +40,27 @@ const TABLES = {
       { name: 'inserted_at', mysql: 'DATETIME', pg: 'TIMESTAMP' },
     ],
   },
+  app_opiauto_item_department: {
+    name: 'app_opiauto_item_department',
+    columns: [
+      { name: 'app_opiauto_item_department_id', mysql: 'INT AUTO_INCREMENT PRIMARY KEY', pg: 'SERIAL PRIMARY KEY' },
+      { name: 'icode', mysql: 'VARCHAR(7)', pg: 'VARCHAR(7)' },
+      { name: 'name', mysql: 'VARCHAR(250)', pg: 'VARCHAR(250)' },
+      { name: 'depcode', mysql: 'VARCHAR(20)', pg: 'VARCHAR(20)' },
+    ],
+  },
+  app_opiauto_log: {
+    name: 'app_opiauto_log',
+    columns: [
+      { name: 'app_opiauto_log_id', mysql: 'INT AUTO_INCREMENT PRIMARY KEY', pg: 'SERIAL PRIMARY KEY' },
+      { name: 'vn', mysql: 'VARCHAR(20)', pg: 'VARCHAR(20)' },
+      { name: 'hn', mysql: 'VARCHAR(20)', pg: 'VARCHAR(20)' },
+      { name: 'doctor', mysql: 'VARCHAR(20)', pg: 'VARCHAR(20)' },
+      { name: 'icode', mysql: 'VARCHAR(7)', pg: 'VARCHAR(7)' },
+      { name: 'hos_guid', mysql: 'VARCHAR(50)', pg: 'VARCHAR(50)' },
+      { name: 'inserted_at', mysql: 'DATETIME', pg: 'TIMESTAMP' },
+    ],
+  },
   kskdepartment: {
     name: 'kskdepartment',
     alterOnly: true,

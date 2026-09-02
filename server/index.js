@@ -13,8 +13,11 @@ const templatesRoutes = require('./routes/templates');
 const expenseRoutes = require('./routes/expense');
 const visitsRoutes = require('./routes/visits');
 const dfautoRoutes = require('./routes/dfauto');
+const opiautoRoutes = require('./routes/opiauto');
+const opiautoItemsRoutes = require('./routes/opiautoitems');
 const apitokenRoutes = require('./routes/apitoken');
 const dfAutoJob = require('./dfAutoJob');
+const opiAutoJob = require('./opiAutoJob');
 const requireApiToken = require('./middleware/requireApiToken');
 
 const app = express();
@@ -40,10 +43,13 @@ app.use('/api/templates', requireApiToken, templatesRoutes);
 app.use('/api/expense', requireApiToken, expenseRoutes);
 app.use('/api/visits', requireApiToken, visitsRoutes);
 app.use('/api/dfauto', requireApiToken, dfautoRoutes);
+app.use('/api/opiauto', requireApiToken, opiautoRoutes);
+app.use('/api/opiauto-items', requireApiToken, opiautoItemsRoutes);
 
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
   dfAutoJob.startScheduler();
+  opiAutoJob.startScheduler();
 });
