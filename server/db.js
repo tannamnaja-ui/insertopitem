@@ -6,8 +6,9 @@ let pool = null;
 let poolType = null;
 let poolKey = null;
 
+// charset ต้องอยู่ใน key ด้วย ไม่งั้นเปลี่ยนค่าแล้ว pool เดิมยังถูกใช้ต่อ
 function configKey(cfg) {
-  return [cfg.type, cfg.host, cfg.port, cfg.database, cfg.user].join('|');
+  return [cfg.type, cfg.host, cfg.port, cfg.database, cfg.user, cfg.charset].join('|');
 }
 
 function toPgPlaceholders(sql) {
@@ -27,12 +28,15 @@ async function createPool(cfg) {
       connectionTimeoutMillis: 5000,
     });
   }
+  // HOSxP บน MySQL/MariaDB เก็บภาษาไทยเป็น TIS-620 ถ้าต่อด้วย charset อื่น
+  // ไบต์จะถูกตีความผิดจนอ่านไม่ออก (เช่น "ยา" กลายเป็น "เธขเธฒ")
   return mysql.createPool({
     host: cfg.host,
     port: Number(cfg.port) || 3306,
     database: cfg.database,
     user: cfg.user,
     password: cfg.password,
+    charset: cfg.charset || 'TIS620',
     connectionLimit: 5,
     connectTimeout: 5000,
   });

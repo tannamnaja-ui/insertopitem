@@ -2,6 +2,7 @@ const express = require('express');
 const db = require('../db');
 const requireAuth = require('../middleware/requireAuth');
 const { getOpiAutoState, saveOpiAutoState } = require('../dataStore');
+const { groupConcatDistinct, dateToStr, itemDisplayName } = require('../sqlDialect');
 const opiAutoJob = require('../opiAutoJob');
 
 const router = express.Router();
@@ -66,14 +67,16 @@ router.get('/registry', requireAuth, async (req, res) => {
     const whereParams = dep ? [...dateParams, dep] : dateParams;
 
     const rows = await db.query(
-      `SELECT o.vn, o.hn, TO_CHAR(o.vstdate, 'YYYY-MM-DD') AS vstdate, p.pname, p.fname, p.lname, o.main_dep, dep.department,
-           STRING_AGG(DISTINCT idep.name, ', ') AS item_names,
+      `SELECT o.vn, o.hn, ${dateToStr('o.vstdate')} AS vstdate, p.pname, p.fname, p.lname, o.main_dep, dep.department,
+           ${groupConcatDistinct(itemDisplayName({ stored: 'idep.name' }))} AS item_names,
            COUNT(DISTINCT idep.icode) AS item_count,
            COUNT(DISTINCT opi.icode) AS logged_count
        FROM ovst o
        JOIN patient p ON p.hn = o.hn
        JOIN app_opiauto_item_department idep ON idep.depcode = o.main_dep
        LEFT JOIN kskdepartment dep ON dep.depcode = o.main_dep
+       LEFT JOIN s_drugitems sd ON sd.icode = idep.icode
+       LEFT JOIN drugitems dg ON dg.icode = idep.icode
        LEFT JOIN opitemrece opi ON opi.vn = o.vn AND opi.icode = idep.icode
        WHERE ${conditions.join(' AND ')}
        GROUP BY o.vn, o.hn, o.vstdate, p.pname, p.fname, p.lname, o.main_dep, dep.department

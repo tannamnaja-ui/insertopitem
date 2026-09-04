@@ -22,7 +22,7 @@ function writeJson(filePath, data) {
 
 function getDbConfig() {
   return readJson(DB_CONFIG_PATH, {
-    type: 'mysql', host: '', port: '', database: '', user: '', password: ''
+    type: 'mysql', host: '', port: '', database: '', user: '', password: '', charset: 'TIS620'
   });
 }
 

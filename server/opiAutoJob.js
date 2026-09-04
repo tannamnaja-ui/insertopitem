@@ -1,6 +1,9 @@
+const crypto = require('crypto');
 const db = require('./db');
 const { getOpiAutoState, saveOpiAutoState } = require('./dataStore');
 const { ensureAutoOfficer } = require('./autoStaff');
+const { nowTime, nowTimestamp } = require('./sqlDialect');
+const { insertRows } = require('./bulkInsert');
 
 // insert ค่าบริการอัตโนมัติ: เช็คเงื่อนไขเดียวคือห้องตรวจ — VN ของวันนี้ที่ main_dep ถูกผูกไว้กับรายการ (icode)
 // ใน app_opiauto_item_department (1 ห้องผูกได้หลาย icode, 1 icode ผูกได้หลายห้อง ไม่บังคับ 1 ต่อ 1)
@@ -11,6 +14,12 @@ const { ensureAutoOfficer } = require('./autoStaff');
 // รับ depcode ได้เพื่อจำกัดเฉพาะห้องตรวจเดียว — ถ้าไม่ส่งมาจะทำให้ทุกห้องที่ตั้งค่าไว้
 // app_opiauto_log เก็บไว้เป็น audit trail ว่าแถวไหนมาจากระบบนี้ (ไม่ได้ใช้เป็นตัวกันซ้ำแล้ว)
 let running = false;
+
+// hos_guid รูปแบบที่ HOSxP ใช้: {UUID ตัวพิมพ์ใหญ่}
+// สร้างฝั่งแอปเพื่อให้ใช้ได้ทั้ง PostgreSQL และ MariaDB โดยไม่ต้องพึ่งฟังก์ชันของฐานข้อมูล
+function newHosGuid() {
+  return '{' + crypto.randomUUID().toUpperCase() + '}';
+}
 
 async function runOnce({ dateFrom, dateTo, depcode } = {}) {
   const isDate = (v) => /^\d{4}-\d{2}-\d{2}$/.test(v || '');
@@ -48,10 +57,9 @@ async function runOnce({ dateFrom, dateTo, depcode } = {}) {
 
     await ensureAutoOfficer();
 
-    const inserted = await db.transaction(async (query) => query(
-      `WITH candidates AS MATERIALIZED (
-         SELECT
-           '{' || UPPER(gen_random_uuid()::TEXT) || '}' AS hos_guid,
+    summary.inserted = await db.transaction(async (query) => {
+      const candidates = await query(
+        `SELECT
            o.vn, o.hn, o.vstdate, o.vsttime, o.pttype, o.main_dep AS dep_code,
            COALESCE(o.doctor, '') AS doctor,
            idep.icode,
@@ -67,23 +75,37 @@ async function runOnce({ dateFrom, dateTo, depcode } = {}) {
            AND NOT EXISTS (
              SELECT 1 FROM opitemrece opi
              WHERE opi.vn = o.vn AND opi.icode = idep.icode
-           )
-       ),
-       ins AS (
-         INSERT INTO opitemrece (hos_guid, vn, hn, icode, qty, drugusage, unitprice, vstdate, vsttime,
-             doctor, rxdate, rxtime, dep_code, pttype, income, staff, paidst, last_modified, sum_price, cost, sp_use, idr)
-         SELECT hos_guid, vn, hn, icode, 1, '', unitprice, vstdate, vsttime,
-             doctor, vstdate, LOCALTIME(0), dep_code, pttype, income, 'auto_auto', '03', LOCALTIMESTAMP(0), unitprice, cost, 'OPI_AUTO', 'OPI_AUTO'
-         FROM candidates
-         RETURNING hos_guid
-       )
-       INSERT INTO app_opiauto_log (vn, hn, doctor, icode, hos_guid, inserted_at)
-       SELECT vn, hn, doctor, icode, hos_guid, LOCALTIMESTAMP(0) FROM candidates
-       RETURNING vn`,
-      whereParams
-    ));
+           )`,
+        whereParams
+      );
 
-    summary.inserted = inserted.length;
+      if (!candidates.length) return 0;
+      for (const row of candidates) row.hos_guid = newHosGuid();
+
+      await insertRows(query, {
+        table: 'opitemrece',
+        columns: ['hos_guid', 'vn', 'hn', 'icode', 'qty', 'drugusage', 'unitprice', 'vstdate', 'vsttime',
+          'doctor', 'rxdate', 'rxtime', 'dep_code', 'pttype', 'income', 'staff', 'paidst', 'last_modified',
+          'sum_price', 'cost', 'sp_use', 'idr'],
+        valueTemplate: `(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ${nowTime()}, ?, ?, ?, ?, ?, ${nowTimestamp()}, ?, ?, ?, ?)`,
+        toParams: (r) => [
+          r.hos_guid, r.vn, r.hn, r.icode, 1, '', r.unitprice, r.vstdate, r.vsttime,
+          r.doctor, r.vstdate, r.dep_code, r.pttype, r.income, 'auto_auto', '03',
+          r.unitprice, r.cost, 'OPI_AUTO', 'OPI_AUTO',
+        ],
+        rows: candidates,
+      });
+
+      await insertRows(query, {
+        table: 'app_opiauto_log',
+        columns: ['vn', 'hn', 'doctor', 'icode', 'hos_guid', 'inserted_at'],
+        valueTemplate: `(?, ?, ?, ?, ?, ${nowTimestamp()})`,
+        toParams: (r) => [r.vn, r.hn, r.doctor, r.icode, r.hos_guid],
+        rows: candidates,
+      });
+
+      return candidates.length;
+    });
   } catch (err) {
     summary.error = err.message;
   } finally {

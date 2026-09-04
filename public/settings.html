@@ -50,6 +50,15 @@
         <input type="password" id="dbpassword" placeholder="รหัสผ่านฐานข้อมูล">
       </div>
 
+      <div class="field" id="charsetField">
+        <label>Charset (เฉพาะ MySQL/MariaDB)</label>
+        <select id="dbcharset">
+          <option value="TIS620">TIS620 — ภาษาไทยของ HOSxP (ค่ามาตรฐาน)</option>
+          <option value="UTF8MB4_GENERAL_CI">UTF8MB4 — ใช้เมื่อฐานข้อมูลเก็บเป็น UTF-8</option>
+        </select>
+        <div style="font-size:11.5px;color:var(--ink-soft);margin-top:4px;">ถ้าชื่อรายการภาษาไทยแสดงเป็นอักขระอ่านไม่ออก ให้ลองสลับค่านี้</div>
+      </div>
+
       <div class="row">
         <button type="button" class="btn btn-secondary btn-block" id="testBtn">🔌 ทดสอบการเชื่อมต่อ</button>
         <button type="submit" class="btn btn-primary btn-block" id="saveBtn">💾 บันทึกข้อมูลเชื่อมต่อ</button>

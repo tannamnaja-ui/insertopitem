@@ -2,6 +2,7 @@ const express = require('express');
 const db = require('../db');
 const requireAuth = require('../middleware/requireAuth');
 const { getIcd10AutoState, saveIcd10AutoState } = require('../dataStore');
+const { groupConcatDistinct, dateToStr, concat, itemDisplayName } = require('../sqlDialect');
 const icd10AutoJob = require('../icd10AutoJob');
 
 const router = express.Router();
@@ -32,10 +33,13 @@ router.post('/run-now', requireAuth, async (req, res) => {
 router.get('/items', requireAuth, async (req, res) => {
   try {
     const rows = await db.query(
-      `SELECT m.icode, MAX(m.name) AS name, COUNT(DISTINCT m.icd10) AS icd10_count
+      `SELECT m.icode, MAX(${itemDisplayName({ stored: 'm.name' })}) AS name,
+              COUNT(DISTINCT m.icd10) AS icd10_count
          FROM app_icd10_opi_item m
+         LEFT JOIN s_drugitems sd ON sd.icode = m.icode
+         LEFT JOIN drugitems dg ON dg.icode = m.icode
         GROUP BY m.icode
-        ORDER BY MAX(m.name), m.icode`
+        ORDER BY MAX(${itemDisplayName({ stored: 'm.name' })}), m.icode`
     );
     res.json({
       ok: true,
@@ -65,9 +69,9 @@ router.get('/registry', requireAuth, async (req, res) => {
     const whereParams = item ? [...dateParams, item] : dateParams;
 
     const rows = await db.query(
-      `SELECT o.vn, o.hn, TO_CHAR(o.vstdate, 'YYYY-MM-DD') AS vstdate, p.pname, p.fname, p.lname,
+      `SELECT o.vn, o.hn, ${dateToStr('o.vstdate')} AS vstdate, p.pname, p.fname, p.lname,
            o.main_dep, dep.department,
-           STRING_AGG(DISTINCT m.icode || ' -> ' || m.icd10, ', ') AS pair_names,
+           ${groupConcatDistinct(concat('m.icode', "' -> '", 'm.icd10'))} AS pair_names,
            COUNT(DISTINCT m.icd10) AS item_count,
            COUNT(DISTINCT d.icd10) AS logged_count
        FROM ovst o

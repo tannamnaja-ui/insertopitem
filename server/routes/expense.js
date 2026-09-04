@@ -1,6 +1,7 @@
 const express = require('express');
 const db = require('../db');
 const requireAuth = require('../middleware/requireAuth');
+const { newHosGuid, nowTime, nowTimestamp, toTimestamp, concat } = require('../sqlDialect');
 
 const router = express.Router();
 
@@ -20,7 +21,7 @@ async function insertExpenseForVns({ templateId, doctorCode, depcode, vns, staff
     await query(
       `INSERT INTO opitemrece (hos_guid, vn, hn, icode, qty, drugusage, unitprice, vstdate, vsttime,
           doctor, rxdate, rxtime, dep_code, pttype, income, staff, paidst, last_modified, sum_price, cost, sp_use, idr)
-       SELECT '{' || UPPER(gen_random_uuid()::TEXT) || '}' AS hos_guid,
+       SELECT ${newHosGuid()} AS hos_guid,
            o.vn,
            o.hn,
            t.icode,
@@ -31,13 +32,13 @@ async function insertExpenseForVns({ templateId, doctorCode, depcode, vns, staff
            o.vsttime,
            ? AS doctor,
            o.vstdate AS rxdate,
-           LOCALTIME(0) AS rxtime,
+           ${nowTime()} AS rxtime,
            ? AS dep_code,
            o.pttype,
            t.income,
            ? AS staff,
            p.paidst,
-           LOCALTIMESTAMP(0) AS last_modified,
+           ${nowTimestamp()} AS last_modified,
            t.sum_price,
            t.cost,
            t.template_name AS sp_use,
@@ -65,7 +66,7 @@ async function insertExpenseForVns({ templateId, doctorCode, depcode, vns, staff
            d.opi_frequency_code AS frequency_code,
            d.opi_time_code AS time_code,
            dt.therapeutic AS drug_hint_text,
-           concat(o.vstdate, ' ', o.vsttime)::timestamp AS modify_datetime,
+           ${toTimestamp(concat('o.vstdate', "' '", 'o.vsttime'))} AS modify_datetime,
            o.staff AS modify_staff,
            o.unitprice AS price,
            d.opi_usage_unit_code AS usage_unit_code,
@@ -106,7 +107,7 @@ async function insertExpenseForVns({ templateId, doctorCode, depcode, vns, staff
           officer_activity_log_date)
        (SELECT get_serialnumber('officer_activity_log_id') AS officer_activity_log_id,
            ? AS officer_id,
-           LOCALTIMESTAMP(0) AS officer_activity_log_datetime,
+           ${nowTimestamp()} AS officer_activity_log_datetime,
            'ADD_APP' AS officer_activity_log_computer,
            'opitemrece' AS officer_activity_log_table,
            'Add' AS officer_activity_log_operation,

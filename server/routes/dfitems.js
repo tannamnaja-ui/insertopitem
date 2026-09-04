@@ -1,6 +1,7 @@
 const express = require('express');
 const db = require('../db');
 const requireAuth = require('../middleware/requireAuth');
+const { itemDisplayName } = require('../sqlDialect');
 
 const router = express.Router();
 
@@ -8,13 +9,16 @@ const router = express.Router();
 router.get('/', requireAuth, async (req, res) => {
   try {
     const rows = await db.query(
-      `SELECT ad.app_df_item_department_id, ad.icode, ad.name, ad.depcode, k.department,
+      `SELECT ad.app_df_item_department_id, ad.icode,
+           ${itemDisplayName({ stored: 'ad.name', dg: 'd' })} AS name,
+           ad.depcode, k.department,
            COALESCE(d.unitprice, n.price) AS price
        FROM app_df_item_department ad
        LEFT JOIN kskdepartment k ON k.depcode = ad.depcode
        LEFT JOIN drugitems d ON d.icode = ad.icode
        LEFT JOIN nondrugitems n ON n.icode = ad.icode
-       ORDER BY ad.name, k.department`
+       LEFT JOIN s_drugitems sd ON sd.icode = ad.icode
+       ORDER BY ${itemDisplayName({ stored: 'ad.name', dg: 'd' })}, k.department`
     );
 
     const byIcode = new Map();

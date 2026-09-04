@@ -4,6 +4,8 @@ const portInput = document.getElementById('port');
 const dbInput = document.getElementById('database');
 const userInput = document.getElementById('dbuser');
 const passInput = document.getElementById('dbpassword');
+const charsetInput = document.getElementById('dbcharset');
+const charsetField = document.getElementById('charsetField');
 const testBtn = document.getElementById('testBtn');
 const saveBtn = document.getElementById('saveBtn');
 const configForm = document.getElementById('configForm');
@@ -30,6 +32,7 @@ function selectType(type) {
   dbType = type;
   document.getElementById('opt-mysql').classList.toggle('active', type === 'mysql');
   document.getElementById('opt-postgresql').classList.toggle('active', type === 'postgresql');
+  charsetField.style.display = type === 'mysql' ? '' : 'none';
   if (!portInput.value || portInput.value === prevDefault) {
     portInput.value = defaultPorts[type];
   }
@@ -46,6 +49,7 @@ function getConfig() {
     database: dbInput.value.trim(),
     user: userInput.value.trim(),
     password: passInput.value,
+    charset: charsetInput.value,
   };
 }
 
@@ -69,6 +73,7 @@ async function loadExisting() {
       dbInput.value = cfg.database || '';
       userInput.value = cfg.user || '';
       passInput.value = cfg.password || '';
+      charsetInput.value = cfg.charset || 'TIS620';
     } else {
       portInput.value = defaultPorts[dbType];
     }

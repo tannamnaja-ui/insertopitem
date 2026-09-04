@@ -2,6 +2,7 @@ const express = require('express');
 const db = require('../db');
 const requireAuth = require('../middleware/requireAuth');
 const { getDfAutoState, saveDfAutoState } = require('../dataStore');
+const { groupConcatDistinct, concat, itemDisplayName } = require('../sqlDialect');
 const dfAutoJob = require('../dfAutoJob');
 
 const router = express.Router();
@@ -33,14 +34,16 @@ router.get('/registry', requireAuth, async (req, res) => {
 
     const rows = await db.query(
       `SELECT o.vn, o.hn, p.pname, p.fname, p.lname, o.main_dep, dep.department,
-           STRING_AGG(DISTINCT idep.name, ', ') AS item_names,
+           ${groupConcatDistinct(itemDisplayName({ stored: 'idep.name' }))} AS item_names,
            COUNT(DISTINCT idep.icode) AS item_count,
            COUNT(DISTINCT s.doctor) AS signer_count,
-           COUNT(DISTINCT log.doctor || '|' || log.icode) AS logged_count
+           COUNT(DISTINCT ${concat('log.doctor', "'|'", 'log.icode')}) AS logged_count
        FROM ovst o
        JOIN patient p ON p.hn = o.hn
        JOIN app_df_item_department idep ON idep.depcode = o.main_dep
        LEFT JOIN kskdepartment dep ON dep.depcode = o.main_dep
+       LEFT JOIN s_drugitems sd ON sd.icode = idep.icode
+       LEFT JOIN drugitems dg ON dg.icode = idep.icode
        LEFT JOIN (
          SELECT DISTINCT ds.vn, ds.doctor
          FROM ovst_doctor_sign ds

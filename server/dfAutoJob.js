@@ -1,6 +1,9 @@
+const crypto = require('crypto');
 const db = require('./db');
 const { getDfAutoState, saveDfAutoState } = require('./dataStore');
 const { ensureAutoOfficer } = require('./autoStaff');
+const { nowTime, nowTimestamp } = require('./sqlDialect');
+const { insertRows } = require('./bulkInsert');
 
 // insert ค่า DF อัตโนมัติ: สำหรับ VN ของวันนี้ที่ main_dep ถูกผูกไว้กับรายการ (icode) ใน app_df_item_department
 // (1 ห้องผูกได้หลาย icode, 1 icode ผูกได้หลายห้อง ไม่บังคับ 1 ต่อ 1)
@@ -8,6 +11,12 @@ const { ensureAutoOfficer } = require('./autoStaff');
 // (ถ้าไม่มีแพทย์ position_id='1' ลงนามไว้ จะไม่ดีดค่า DF ให้)
 // แล้ว insert รายการที่ผูกไว้กับห้องนั้นให้แพทย์แต่ละคน (เฉพาะคู่ vn+doctor+icode ที่ยังไม่เคย insert)
 let running = false;
+
+// hos_guid รูปแบบที่ HOSxP ใช้: {UUID ตัวพิมพ์ใหญ่}
+// สร้างฝั่งแอปเพื่อให้ใช้ได้ทั้ง PostgreSQL และ MariaDB โดยไม่ต้องพึ่งฟังก์ชันของฐานข้อมูล
+function newHosGuid() {
+  return '{' + crypto.randomUUID().toUpperCase() + '}';
+}
 
 async function runOnce() {
   // ถ้ารอบก่อนหน้ายังทำงานไม่จบ ให้ข้ามรอบนี้ไป ไม่งั้นสองรอบจะมองไม่เห็นการ insert ของกันและกัน
@@ -26,15 +35,10 @@ async function runOnce() {
 
     await ensureAutoOfficer();
 
-    const inserted = await db.transaction(async (query) => query(
-      `WITH signers AS (
-         SELECT DISTINCT ds.vn, ds.doctor
-         FROM ovst_doctor_sign ds
-         JOIN doctor doc ON doc.code = ds.doctor AND doc.position_id = 1
-       ),
-       candidates AS MATERIALIZED (
-         SELECT
-           '{' || UPPER(gen_random_uuid()::TEXT) || '}' AS hos_guid,
+    summary.inserted = await db.transaction(async (query) => {
+      // หารายการที่ต้องเพิ่มก่อน (ใช้ derived table แทน CTE เพื่อให้รองรับทั้งสองฐานข้อมูล)
+      const candidates = await query(
+        `SELECT
            o.vn, o.hn, o.vstdate, o.vsttime, o.pttype, o.main_dep AS dep_code,
            s.doctor,
            idep.icode,
@@ -42,7 +46,11 @@ async function runOnce() {
            COALESCE(sd.income, '') AS income,
            COALESCE(sd.cost, 0) AS cost
          FROM ovst o
-         JOIN signers s ON s.vn = o.vn
+         JOIN (
+           SELECT DISTINCT ds.vn, ds.doctor
+           FROM ovst_doctor_sign ds
+           JOIN doctor doc ON doc.code = ds.doctor AND doc.position_id = 1
+         ) s ON s.vn = o.vn
          JOIN app_df_item_department idep ON idep.depcode = o.main_dep
          LEFT JOIN s_drugitems sd ON sd.icode = idep.icode
          LEFT JOIN drugitems dg ON dg.icode = idep.icode
@@ -50,23 +58,37 @@ async function runOnce() {
          LEFT JOIN app_df_auto_log log
            ON log.vn = o.vn AND log.doctor = s.doctor AND log.icode = idep.icode
          WHERE o.vstdate = CURRENT_DATE
-           AND log.app_df_auto_log_id IS NULL
-       ),
-       ins AS (
-         INSERT INTO opitemrece (hos_guid, vn, hn, icode, qty, drugusage, unitprice, vstdate, vsttime,
-             doctor, rxdate, rxtime, dep_code, pttype, income, staff, paidst, last_modified, sum_price, cost, sp_use, idr)
-         SELECT hos_guid, vn, hn, icode, 1, '', unitprice, vstdate, vsttime,
-             doctor, vstdate, LOCALTIME(0), dep_code, pttype, income, 'auto_auto', '03', LOCALTIMESTAMP(0), unitprice, cost, 'DF_AUTO', 'DF_AUTO'
-         FROM candidates
-         RETURNING hos_guid
-       )
-       INSERT INTO app_df_auto_log (vn, hn, doctor, icode, hos_guid, inserted_at)
-       SELECT vn, hn, doctor, icode, hos_guid, LOCALTIMESTAMP(0) FROM candidates
-       RETURNING vn`,
-      []
-    ));
+           AND log.app_df_auto_log_id IS NULL`,
+        []
+      );
 
-    summary.inserted = inserted.length;
+      if (!candidates.length) return 0;
+      for (const row of candidates) row.hos_guid = newHosGuid();
+
+      await insertRows(query, {
+        table: 'opitemrece',
+        columns: ['hos_guid', 'vn', 'hn', 'icode', 'qty', 'drugusage', 'unitprice', 'vstdate', 'vsttime',
+          'doctor', 'rxdate', 'rxtime', 'dep_code', 'pttype', 'income', 'staff', 'paidst', 'last_modified',
+          'sum_price', 'cost', 'sp_use', 'idr'],
+        valueTemplate: `(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ${nowTime()}, ?, ?, ?, ?, ?, ${nowTimestamp()}, ?, ?, ?, ?)`,
+        toParams: (r) => [
+          r.hos_guid, r.vn, r.hn, r.icode, 1, '', r.unitprice, r.vstdate, r.vsttime,
+          r.doctor, r.vstdate, r.dep_code, r.pttype, r.income, 'auto_auto', '03',
+          r.unitprice, r.cost, 'DF_AUTO', 'DF_AUTO',
+        ],
+        rows: candidates,
+      });
+
+      await insertRows(query, {
+        table: 'app_df_auto_log',
+        columns: ['vn', 'hn', 'doctor', 'icode', 'hos_guid', 'inserted_at'],
+        valueTemplate: `(?, ?, ?, ?, ?, ${nowTimestamp()})`,
+        toParams: (r) => [r.vn, r.hn, r.doctor, r.icode, r.hos_guid],
+        rows: candidates,
+      });
+
+      return candidates.length;
+    });
   } catch (err) {
     summary.error = err.message;
   } finally {

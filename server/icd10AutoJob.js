@@ -1,6 +1,8 @@
 const db = require('./db');
 const { getIcd10AutoState, saveIcd10AutoState } = require('./dataStore');
 const { ensureAutoOfficer } = require('./autoStaff');
+const { nowTimestamp } = require('./sqlDialect');
+const { insertRows } = require('./bulkInsert');
 
 // insert ICD10 อัตโนมัติ "ตามค่าบริการ" ที่ผู้ป่วยได้รับ
 //
@@ -16,6 +18,53 @@ const { ensureAutoOfficer } = require('./autoStaff');
 // app_icd10_auto_log เก็บไว้เป็น audit trail ว่าแถวไหนมาจากระบบนี้
 
 let running = false;
+
+// แบ่ง list ยาว ๆ เป็นก้อนก่อนเอาไปใส่ใน IN (...) กันคำสั่งยาวเกินและพารามิเตอร์เกินลิมิต
+function chunk(list, size) {
+  const out = [];
+  for (let i = 0; i < list.length; i += size) out.push(list.slice(i, i + size));
+  return out;
+}
+
+// แพทย์ของยารายการแรกที่คีฟใน VN นั้น (icode ขึ้นต้นด้วย 1)
+// เรียงตามเวลาที่สั่งจริง rxdate/rxtime แล้วค่อย last_modified กันกรณีเวลาซ้ำ
+// ดึงมาทั้งชุดแล้วหยิบตัวแรกของแต่ละ VN ในแอป เพื่อเลี่ยง "first row per group" ที่เขียนต่างกันในแต่ละฐานข้อมูล
+async function loadFirstDrugDoctors(query, vns) {
+  const firstDoctorByVn = new Map();
+
+  for (const part of chunk(vns, 500)) {
+    const placeholders = part.map(() => '?').join(',');
+    const rows = await query(
+      `SELECT rx.vn, rx.doctor
+         FROM opitemrece rx
+        WHERE rx.vn IN (${placeholders})
+          AND rx.icode LIKE '1%'
+        ORDER BY rx.vn, rx.rxdate, rx.rxtime, rx.last_modified`,
+      part
+    );
+    for (const r of rows) {
+      if (!firstDoctorByVn.has(r.vn)) firstDoctorByVn.set(r.vn, r.doctor || '');
+    }
+  }
+
+  return firstDoctorByVn;
+}
+
+// ลำดับวินิจฉัยสูงสุดที่ VN นั้นมีอยู่แล้ว ใช้เป็นฐานให้ diag_no ของรายการใหม่นับต่อ ไม่ทับของเดิม
+async function loadMaxDiagNo(query, vns) {
+  const maxByVn = new Map();
+
+  for (const part of chunk(vns, 500)) {
+    const placeholders = part.map(() => '?').join(',');
+    const rows = await query(
+      `SELECT vn, MAX(diag_no) AS max_no FROM ovstdiag WHERE vn IN (${placeholders}) GROUP BY vn`,
+      part
+    );
+    for (const r of rows) maxByVn.set(r.vn, Number(r.max_no) || 0);
+  }
+
+  return maxByVn;
+}
 
 async function runOnce({ dateFrom, dateTo, icode } = {}) {
   const isDate = (v) => /^\d{4}-\d{2}-\d{2}$/.test(v || '');
@@ -52,42 +101,21 @@ async function runOnce({ dateFrom, dateTo, icode } = {}) {
 
     await ensureAutoOfficer();
 
-    const inserted = await db.transaction(async (query) => query(
-      `WITH candidates AS MATERIALIZED (
-         -- จับกลุ่มที่ระดับ vn + icd10 ไม่ใช่ vn + icode
-         -- ถ้าค่าบริการหลายรายการชี้ไปรหัสเดียวกัน จะได้ลงวินิจฉัยครั้งเดียว ไม่ซ้ำ
-         SELECT
+    summary.inserted = await db.transaction(async (query) => {
+      // จับกลุ่มที่ระดับ vn + icd10 ไม่ใช่ vn + icode
+      // ถ้าค่าบริการหลายรายการชี้ไปรหัสเดียวกัน จะได้ลงวินิจฉัยครั้งเดียว ไม่ซ้ำ
+      const candidates = await query(
+        `SELECT
            o.vn,
            o.hn,
            MIN(o.vstdate) AS vstdate,
            MIN(o.vsttime) AS vsttime,
-           MIN(o.main_dep) AS dep_code,
            m.icd10,
            MIN(m.icode) AS icode,
            MIN(m.diagtype) AS diagtype,
-           -- ลำดับการวินิจฉัยใน VN นั้น ต่อจากที่มีอยู่เดิม (window function ทำงานหลัง GROUP BY จึงนับต่อได้ถูก)
-           COALESCE((SELECT MAX(d2.diag_no) FROM ovstdiag d2 WHERE d2.vn = o.vn), 0)
-             + ROW_NUMBER() OVER (PARTITION BY o.vn ORDER BY m.icd10) AS diag_no,
-           -- fixed = ใช้แพทย์ที่ฟิกไว้
-           -- order = ใช้แพทย์จาก "ยารายการแรกที่คีย์ของ VN นั้น" (icode ขึ้นต้นด้วย 1)
-           --         เรียงตามเวลาที่สั่งจริง rxdate/rxtime แล้วค่อย last_modified กันกรณีเวลาซ้ำ
-           --         ถ้ายารายการแรกไม่มีแพทย์กำกับ ค่อยถอยไปใช้แพทย์เจ้าของ visit
-           CASE
-             WHEN MIN(m.doctor_mode) = 'fixed' AND COALESCE(MIN(m.doctor), '') <> ''
-               THEN MIN(m.doctor)
-             ELSE COALESCE(
-               NULLIF((
-                 SELECT rx.doctor
-                   FROM opitemrece rx
-                  WHERE rx.vn = o.vn
-                    AND rx.icode LIKE '1%'
-                  ORDER BY rx.rxdate, rx.rxtime, rx.last_modified
-                  LIMIT 1
-               ), ''),
-               MIN(o.doctor),
-               ''
-             )
-           END AS doctor
+           MIN(m.doctor_mode) AS doctor_mode,
+           MIN(m.doctor) AS fixed_doctor,
+           MIN(COALESCE(o.doctor, '')) AS visit_doctor
          FROM ovst o
          JOIN opitemrece opi ON opi.vn = o.vn
          JOIN app_icd10_opi_item m ON m.icode = opi.icode
@@ -97,24 +125,50 @@ async function runOnce({ dateFrom, dateTo, icode } = {}) {
              WHERE d.vn = o.vn AND d.icd10 = m.icd10
            )
          GROUP BY o.vn, o.hn, m.icd10
-       ),
-       ins AS (
-         -- ovst_diag_id เป็น primary key แบบ NOT NULL และไม่มี default ต้องขอเลขจาก get_serialnumber เอง
-         -- คอลัมน์ที่เหลือ (hcode, dep_flag, episode, icd103, hos_guid, ...) ของจริงแทบไม่ถูกใช้ ปล่อยเป็น NULL ตามระบบ
-         INSERT INTO ovstdiag (ovst_diag_id, vn, hn, vstdate, vsttime, icd10, diagtype,
-             doctor, staff, diag_no, update_datetime)
-         SELECT get_serialnumber('ovst_diag_id'), vn, hn, vstdate, vsttime, icd10, diagtype,
-             doctor, 'auto_auto', diag_no, LOCALTIMESTAMP(0)
-         FROM candidates
-         RETURNING vn
-       )
-       INSERT INTO app_icd10_auto_log (vn, hn, icode, icd10, inserted_at)
-       SELECT vn, hn, icode, icd10, LOCALTIMESTAMP(0) FROM candidates
-       RETURNING vn`,
-      whereParams
-    ));
+         ORDER BY o.vn, m.icd10`,
+        whereParams
+      );
 
-    summary.inserted = inserted.length;
+      if (!candidates.length) return 0;
+
+      const vns = [...new Set(candidates.map((r) => r.vn))];
+      const needsOrderDoctor = candidates.some((r) => r.doctor_mode !== 'fixed' || !r.fixed_doctor);
+      const firstDoctorByVn = needsOrderDoctor ? await loadFirstDrugDoctors(query, vns) : new Map();
+      const maxDiagNoByVn = await loadMaxDiagNo(query, vns);
+
+      // เดินไล่ตามลำดับที่คิวรี่เรียงมาแล้ว (vn, icd10) เพื่อให้ diag_no ของแต่ละ VN นับต่อเนื่องกัน
+      const runningNoByVn = new Map();
+      for (const r of candidates) {
+        r.doctor = (r.doctor_mode === 'fixed' && r.fixed_doctor)
+          ? r.fixed_doctor
+          : (firstDoctorByVn.get(r.vn) || r.visit_doctor || '');
+
+        const next = (runningNoByVn.get(r.vn) || maxDiagNoByVn.get(r.vn) || 0) + 1;
+        runningNoByVn.set(r.vn, next);
+        r.diag_no = next;
+      }
+
+      // ovst_diag_id เป็น primary key แบบ NOT NULL และไม่มี default ต้องขอเลขจาก get_serialnumber เอง
+      // คอลัมน์ที่เหลือ (hcode, dep_flag, episode, icd103, hos_guid, ...) ของจริงแทบไม่ถูกใช้ ปล่อยเป็น NULL ตามระบบ
+      await insertRows(query, {
+        table: 'ovstdiag',
+        columns: ['ovst_diag_id', 'vn', 'hn', 'vstdate', 'vsttime', 'icd10', 'diagtype',
+          'doctor', 'staff', 'diag_no', 'update_datetime'],
+        valueTemplate: `(get_serialnumber('ovst_diag_id'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ${nowTimestamp()})`,
+        toParams: (r) => [r.vn, r.hn, r.vstdate, r.vsttime, r.icd10, r.diagtype, r.doctor, 'auto_auto', r.diag_no],
+        rows: candidates,
+      });
+
+      await insertRows(query, {
+        table: 'app_icd10_auto_log',
+        columns: ['vn', 'hn', 'icode', 'icd10', 'inserted_at'],
+        valueTemplate: `(?, ?, ?, ?, ${nowTimestamp()})`,
+        toParams: (r) => [r.vn, r.hn, r.icode, r.icd10],
+        rows: candidates,
+      });
+
+      return candidates.length;
+    });
   } catch (err) {
     summary.error = err.message;
   } finally {

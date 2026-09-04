@@ -34,6 +34,7 @@ router.post('/save', (req, res) => {
     database: cfg.database,
     user: cfg.user,
     password: cfg.password || '',
+    charset: cfg.charset || 'TIS620',
   });
   db.resetPool();
   res.json({ ok: true });
