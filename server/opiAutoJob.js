@@ -7,6 +7,7 @@ const { insertRows } = require('./bulkInsert');
 
 // insert ค่าบริการอัตโนมัติ: เช็คเงื่อนไขเดียวคือห้องตรวจ — VN ของวันนี้ที่ main_dep ถูกผูกไว้กับรายการ (icode)
 // ใน app_opiauto_item_department (1 ห้องผูกได้หลาย icode, 1 icode ผูกได้หลายห้อง ไม่บังคับ 1 ต่อ 1)
+// จำกัดกลุ่มสิทธิได้ต่อ template: ถ้าตั้งไว้ จะดีดให้เฉพาะผู้ป่วยที่สิทธิอยู่ในกลุ่มนั้น (pttype.hipdata_code)
 // ไม่เช็คแพทย์เลย ไม่ต้องรอลงนาม — แพทย์ผู้สั่งใช้ ovst.doctor ของ visit นั้น (ถ้าไม่มีจะปล่อยว่าง)
 // กันซ้ำจาก opitemrece โดยตรง: ถ้า VN นั้นมี icode นั้นอยู่แล้ว (ไม่ว่าใครเป็นคนลง) จะไม่เพิ่มให้อีก
 // รับช่วงวันที่ได้เพื่อ insert ย้อนหลัง — ถ้าไม่ส่งมา (เช่น scheduler) จะใช้ CURRENT_DATE ของฐานข้อมูล
@@ -71,10 +72,17 @@ async function runOnce({ dateFrom, dateTo, depcode } = {}) {
          LEFT JOIN s_drugitems sd ON sd.icode = idep.icode
          LEFT JOIN drugitems dg ON dg.icode = idep.icode
          LEFT JOIN nondrugitems ng ON ng.icode = idep.icode
+         LEFT JOIN pttype pt ON pt.pttype = o.pttype
          WHERE ${conditions.join(' AND ')}
            AND NOT EXISTS (
              SELECT 1 FROM opitemrece opi
              WHERE opi.vn = o.vn AND opi.icode = idep.icode
+           )
+           -- กลุ่มสิทธิเก็บเป็นรายการคั่นจุลภาค เทียบแบบครอบด้วยจุลภาคหัวท้ายกันรหัสสั้นไปชนรหัสยาว
+           -- ว่าง/NULL = ไม่จำกัด, ผู้ป่วยที่สิทธิไม่มี hipdata_code จะไม่เข้าเกณฑ์เมื่อมีการจำกัดไว้
+           AND (
+             COALESCE(idep.hipdata_code, '') = ''
+             OR CONCAT(',', idep.hipdata_code, ',') LIKE CONCAT('%,', COALESCE(pt.hipdata_code, ''), ',%')
            )`,
         whereParams
       );

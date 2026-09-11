@@ -47,6 +47,8 @@ const TABLES = {
       { name: 'icode', mysql: 'VARCHAR(7)', pg: 'VARCHAR(7)' },
       { name: 'name', mysql: 'VARCHAR(250)', pg: 'VARCHAR(250)' },
       { name: 'depcode', mysql: 'VARCHAR(20)', pg: 'VARCHAR(20)' },
+      // รายการรหัสกลุ่มสิทธิ (pttype.hipdata_code) คั่นด้วยจุลภาค ว่าง = ทุกกลุ่มสิทธิ
+      { name: 'hipdata_code', mysql: 'VARCHAR(200)', pg: 'VARCHAR(200)' },
     ],
   },
   app_opiauto_log: {

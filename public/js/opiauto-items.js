@@ -1,5 +1,6 @@
 let configuredItems = [];
 let allDepartments = [];
+let allPttypeGroups = [];
 let selectedItem = null;
 let itemSearchTimer = null;
 let editingId = null;
@@ -20,6 +21,10 @@ function showAlert(message, type) {
   alertBox.className = 'alert show ' + (type === 'success' ? 'alert-success' : 'alert-error');
   alertBox.textContent = message;
   setTimeout(() => alertBox.classList.remove('show'), 4000);
+}
+
+function escapeAttr(s) {
+  return String(s || '').replace(/"/g, '&quot;');
 }
 
 function money(n) {
@@ -177,6 +182,44 @@ async function saveEditedDepartment(id, depcode) {
   }
 }
 
+async function savePttypeGroups(icode, codes) {
+  try {
+    const res = await fetch('/api/opiauto-items/pttype/' + encodeURIComponent(icode), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ codes }),
+    });
+    const data = await res.json();
+    if (!data.ok) {
+      showAlert(data.message || 'บันทึกกลุ่มสิทธิไม่สำเร็จ', 'error');
+      await loadAll();
+      return;
+    }
+    showAlert(codes.length
+      ? 'จำกัดให้ดีดเฉพาะกลุ่มสิทธิ ' + codes.join(', ') + ' แล้ว'
+      : 'ตั้งให้ดีดทุกกลุ่มสิทธิแล้ว', 'success');
+    await loadAll();
+  } catch (err) {
+    showAlert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์', 'error');
+  }
+}
+
+async function removeTemplate(icode, name) {
+  if (!confirm(`ลบ template "${name}" ทั้งรายการ?\n\nห้องตรวจที่ผูกไว้กับค่าบริการนี้จะถูกลบทั้งหมด และจะไม่มีการดีดค่าบริการจากรายการนี้อีก`)) return;
+  try {
+    const res = await fetch('/api/opiauto-items/template/' + encodeURIComponent(icode), { method: 'DELETE' });
+    const data = await res.json();
+    if (!data.ok) {
+      showAlert(data.message || 'ลบ template ไม่สำเร็จ', 'error');
+      return;
+    }
+    showAlert(`ลบ template "${name}" แล้ว`, 'success');
+    await loadAll();
+  } catch (err) {
+    showAlert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์', 'error');
+  }
+}
+
 function renderConfiguredItems() {
   if (!configuredItems.length) {
     itemsList.innerHTML = '';
@@ -186,10 +229,28 @@ function renderConfiguredItems() {
   itemsEmpty.classList.add('hidden');
   itemsList.innerHTML = configuredItems.map((it) => `
     <div class="template-card">
-      <div class="head">
+      <div class="head" style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
         <div>
           <h3 style="margin-bottom:2px;">${it.name}</h3>
           <span style="font-size:12px;color:var(--ink-soft);">icode: ${it.icode} · ${money(it.price)} บาท · ${it.departments.length} ห้องตรวจ</span>
+        </div>
+        <button type="button" class="btn btn-danger btn-sm" data-remove-template="${it.icode}" data-template-name="${escapeAttr(it.name)}">🗑️ ลบ template นี้</button>
+      </div>
+
+      <div style="border:1.5px dashed var(--green-200);border-radius:10px;padding:12px 14px;margin-top:4px;">
+        <div style="font-size:12.5px;font-weight:700;margin-bottom:2px;">กลุ่มสิทธิที่จะดีดค่าบริการให้</div>
+        <div style="font-size:11.5px;color:var(--ink-soft);margin-bottom:8px;">
+          ${it.hipdataCodes.length
+            ? 'ดีดเฉพาะผู้ป่วยที่สิทธิอยู่ใน ' + it.hipdataCodes.length + ' กลุ่มที่ติ๊กไว้'
+            : 'ยังไม่ติ๊กกลุ่มไหน = ดีดให้ทุกกลุ่มสิทธิ'}
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px 16px;">
+          ${allPttypeGroups.map((g) => `
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;" title="${escapeAttr(g.sampleName)}">
+              <input type="checkbox" data-pttype-icode="${it.icode}" value="${g.code}" ${it.hipdataCodes.includes(g.code) ? 'checked' : ''}>
+              ${g.code} <span style="color:var(--ink-soft);font-size:11.5px;">(${g.pttypeCount} สิทธิ)</span>
+            </label>
+          `).join('')}
         </div>
       </div>
       <div class="items-list">
@@ -212,6 +273,18 @@ function renderConfiguredItems() {
 
   itemsList.querySelectorAll('[data-remove]').forEach((btn) => {
     btn.addEventListener('click', () => removeBinding(btn.dataset.remove));
+  });
+  itemsList.querySelectorAll('[data-remove-template]').forEach((btn) => {
+    btn.addEventListener('click', () => removeTemplate(btn.dataset.removeTemplate, btn.dataset.templateName));
+  });
+  itemsList.querySelectorAll('[data-pttype-icode]').forEach((box) => {
+    box.addEventListener('change', () => {
+      const icode = box.dataset.pttypeIcode;
+      const checked = Array.from(itemsList.querySelectorAll('[data-pttype-icode="' + icode + '"]'))
+        .filter((el) => el.checked)
+        .map((el) => el.value);
+      savePttypeGroups(icode, checked);
+    });
   });
   itemsList.querySelectorAll('[data-edit]').forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -293,12 +366,14 @@ function renderConfiguredItems() {
 
 async function loadAll() {
   try {
-    const [itemsRes, deptsRes] = await Promise.all([
+    const [itemsRes, deptsRes, groupsRes] = await Promise.all([
       fetch('/api/opiauto-items').then((r) => r.json()),
       fetch('/api/departments').then((r) => r.json()),
+      fetch('/api/pttype-groups').then((r) => r.json()),
     ]);
     configuredItems = itemsRes.items || [];
     allDepartments = deptsRes.items || [];
+    allPttypeGroups = groupsRes.ok ? (groupsRes.items || []) : [];
     renderConfiguredItems();
   } catch (err) {
     showAlert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์', 'error');
