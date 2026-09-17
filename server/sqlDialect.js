@@ -72,8 +72,27 @@ function itemDisplayName({ stored, sd = 'sd', dg = 'dg' }) {
   return `COALESCE(NULLIF(TRIM(${parts}), ''), ${stored})`;
 }
 
+// เงื่อนไข "คอลัมน์นี้มีอักขระที่ไม่ใช่ตัวเลขปนอยู่"
+// ใช้เฉพาะตอน "ตรวจจับ" เท่านั้น ส่วนการตัดตัวอักษรทิ้งทำในฝั่ง Node
+// เพราะ REGEXP_REPLACE มีเฉพาะ MariaDB 10.0.5+ / MySQL 8+ แต่ตัวดำเนินการ REGEXP มีทุกเวอร์ชัน
+function hasNonDigit(col) {
+  return isPostgres() ? `${col} ~ '[^0-9]'` : `${col} REGEXP '[^0-9]'`;
+}
+
+// UPDATE ที่ต้องอ่านค่าจากอีกตารางหนึ่ง เขียนคนละแบบในสองฐานข้อมูล
+//   PostgreSQL : UPDATE a SET ... FROM b WHERE b.x = a.y AND <where>
+//   MariaDB    : UPDATE a JOIN b ON b.x = a.y SET ... WHERE <where>
+// MariaDB ต้องมี alias นำหน้าคอลัมน์ที่ถูก SET ส่วน PostgreSQL ห้ามมี จึงแยก setClause กันคนละชุด
+function updateFrom({ target, alias, join, joinAlias, on, setPg, setMysql, where }) {
+  return isPostgres()
+    ? `UPDATE ${target} ${alias} SET ${setPg} FROM ${join} ${joinAlias} WHERE ${on} AND ${where}`
+    : `UPDATE ${target} ${alias} JOIN ${join} ${joinAlias} ON ${on} SET ${setMysql} WHERE ${where}`;
+}
+
 module.exports = {
   itemDisplayName,
+  hasNonDigit,
+  updateFrom,
   isPostgres,
   groupConcatDistinct,
   dateToStr,

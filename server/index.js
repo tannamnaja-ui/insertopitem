@@ -20,9 +20,14 @@ const icd10Routes = require('./routes/icd10');
 const icd10autoRoutes = require('./routes/icd10auto');
 const icd10autoItemsRoutes = require('./routes/icd10autoitems');
 const apitokenRoutes = require('./routes/apitoken');
+const phonecleanRoutes = require('./routes/phoneclean');
+const deathupdateRoutes = require('./routes/deathupdate');
+const menuRoutes = require('./routes/menu');
 const dfAutoJob = require('./dfAutoJob');
 const opiAutoJob = require('./opiAutoJob');
 const icd10AutoJob = require('./icd10AutoJob');
+const phoneCleanJob = require('./phoneCleanJob');
+const deathUpdateJob = require('./deathUpdateJob');
 const requireApiToken = require('./middleware/requireApiToken');
 
 const app = express();
@@ -54,6 +59,9 @@ app.use('/api/pttype-groups', requireApiToken, pttypeGroupsRoutes);
 app.use('/api/icd10', requireApiToken, icd10Routes);
 app.use('/api/icd10auto', requireApiToken, icd10autoRoutes);
 app.use('/api/icd10auto-items', requireApiToken, icd10autoItemsRoutes);
+app.use('/api/phoneclean', requireApiToken, phonecleanRoutes);
+app.use('/api/deathupdate', requireApiToken, deathupdateRoutes);
+app.use('/api/menu', requireApiToken, menuRoutes);
 
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
@@ -64,4 +72,6 @@ app.listen(PORT, () => {
   dfAutoJob.startScheduler({ offsetMs: 0 });
   opiAutoJob.startScheduler({ offsetMs: 30 * 1000 });
   icd10AutoJob.startScheduler({ offsetMs: 60 * 1000 });
+  phoneCleanJob.startScheduler({ offsetMs: 90 * 1000 });
+  deathUpdateJob.startScheduler({ offsetMs: 120 * 1000 });
 });

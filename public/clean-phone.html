@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ตัดตัวหนังสือออกจากเบอร์โทรผู้ป่วยอัตโนมัติ</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div style="padding: 36px 24px;">
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-icon">📱</div>
+      <div>
+        <h1 style="margin-bottom:0;">ตัดตัวหนังสือออกจากเบอร์โทรผู้ป่วย<span class="auto-word">อัตโนมัติ</span></h1>
+        <p class="subtitle" style="margin:0;">ตรวจ patient.mobile_phone_number ทุก 5 นาที ตัดตัวหนังสือทิ้งเหลือแต่ตัวเลข และตัดให้เหลือไม่เกิน 10 หลัก</p>
+      </div>
+    </div>
+    <div class="pill">
+      <span id="officerName">-</span>
+      <button class="link-btn" onclick="logout()">ออกจากระบบ</button>
+    </div>
+  </div>
+
+  <a href="menu.html" class="back-link" style="max-width:1180px;margin-left:auto;margin-right:auto;display:block;">&larr; กลับไปหน้าเมนูหลัก</a>
+
+  <div class="card card-xl" style="margin: 0 auto;">
+    <div id="alert" class="alert"></div>
+
+    <div class="row" style="align-items:flex-start;">
+      <div>
+        <h2>ตัดอัตโนมัติทุก 5 นาที</h2>
+        <p class="subtitle" style="margin:0 0 6px;">
+          ตัดอักขระที่<strong>ไม่ใช่ตัวเลข</strong>ออก (ตัวหนังสือไทย/อังกฤษ ขีด วงเล็บ เว้นวรรค)
+          แล้วถ้าตัวเลขที่เหลือ<strong>ยาวเกิน 10 หลัก ตัดท้ายทิ้งให้เหลือ 10 หลักแรก</strong><br>
+          ค่าเดิมทุกค่าถูกบันทึกไว้ก่อนเขียนทับ ย้อนดูได้ที่ตารางประวัติด้านล่าง
+        </p>
+        <div class="status-line" id="autoStatusLine">
+          <span class="status-dot" id="autoStatusDot"></span>
+          <span id="autoStatusText">กำลังตรวจสอบ...</span>
+        </div>
+        <div id="lastRunText" style="font-size:12.5px;color:var(--ink-soft);margin-bottom:14px;"></div>
+      </div>
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <button type="button" class="btn btn-secondary btn-sm" id="toggleBtn">เปิดใช้งาน</button>
+        <button type="button" class="btn btn-outline btn-sm" id="runNowBtn">▶️ รันเดี๋ยวนี้</button>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="row" style="align-items:flex-end;flex-wrap:wrap;margin-bottom:8px;">
+      <div style="flex:1 1 auto;min-width:200px;">
+        <h2 style="margin-bottom:4px;">รายชื่อที่รอตัด</h2>
+        <p class="subtitle" style="margin:0;" id="pendingSummary">กำลังโหลด...</p>
+      </div>
+      <div class="field" style="flex:0 0 auto;margin-bottom:0;">
+        <button type="button" class="btn btn-outline btn-sm" id="refreshBtn">🔄 โหลดใหม่</button>
+      </div>
+    </div>
+
+    <table id="pendingTable">
+      <thead>
+        <tr><th style="width:110px;">HN</th><th>ชื่อ-สกุล</th><th>เบอร์ปัจจุบัน</th><th>หลังตัด (ไม่เกิน 10 หลัก)</th></tr>
+      </thead>
+      <tbody id="pendingBody"></tbody>
+    </table>
+    <div id="pendingEmpty" class="empty-state hidden">ไม่มีเบอร์โทรที่มีตัวหนังสือปนอยู่แล้ว</div>
+
+    <hr class="divider">
+
+    <h2 style="margin-bottom:4px;">ประวัติการตัดล่าสุด</h2>
+    <p class="subtitle">ค่าเดิมก่อนถูกตัด เก็บไว้ในตาราง app_phone_clean_log</p>
+
+    <table id="logTable">
+      <thead>
+        <tr><th style="width:110px;">HN</th><th>ชื่อ-สกุล</th><th>เบอร์เดิม</th><th>เบอร์ใหม่</th><th style="width:170px;">เวลาที่ตัด</th></tr>
+      </thead>
+      <tbody id="logBody"></tbody>
+    </table>
+    <div id="logEmpty" class="empty-state hidden">ยังไม่เคยตัดเบอร์โทร</div>
+  </div>
+</div>
+
+<script src="js/common.js"></script>
+<script src="js/clean-phone.js"></script>
+</body>
+</html>

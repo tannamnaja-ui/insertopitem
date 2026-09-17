@@ -21,3 +21,9 @@ server/data/opiauto-state.json
 
 # สถานะการรัน Insert ICD10 อัตโนมัติ เป็นข้อมูล runtime เฉพาะเครื่อง ไม่ใช่ source code
 server/data/icd10auto-state.json
+
+# สถานะการรันงานตัดเบอร์โทร / อัปเดตข้อมูลเสียชีวิต และการซ่อนกล่องเมนู
+# เป็นข้อมูล runtime เฉพาะเครื่อง ไม่ใช่ source code
+server/data/phoneclean-state.json
+server/data/deathupdate-state.json
+server/data/menu-visibility.json

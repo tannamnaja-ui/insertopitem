@@ -86,6 +86,27 @@ const TABLES = {
       { name: 'inserted_at', mysql: 'DATETIME', pg: 'TIMESTAMP' },
     ],
   },
+  app_phone_clean_log: {
+    name: 'app_phone_clean_log',
+    columns: [
+      { name: 'app_phone_clean_log_id', mysql: 'INT AUTO_INCREMENT PRIMARY KEY', pg: 'SERIAL PRIMARY KEY' },
+      { name: 'hn', mysql: 'VARCHAR(20)', pg: 'VARCHAR(20)' },
+      { name: 'old_value', mysql: 'VARCHAR(100)', pg: 'VARCHAR(100)' },
+      { name: 'new_value', mysql: 'VARCHAR(100)', pg: 'VARCHAR(100)' },
+      { name: 'cleaned_at', mysql: 'DATETIME', pg: 'TIMESTAMP' },
+    ],
+  },
+  app_death_update_log: {
+    name: 'app_death_update_log',
+    columns: [
+      { name: 'app_death_update_log_id', mysql: 'INT AUTO_INCREMENT PRIMARY KEY', pg: 'SERIAL PRIMARY KEY' },
+      { name: 'hn', mysql: 'VARCHAR(20)', pg: 'VARCHAR(20)' },
+      // 'clinicmember' หรือ 'person' บอกว่าแถวนี้ไปอัปเดตตารางไหน
+      { name: 'target_table', mysql: 'VARCHAR(20)', pg: 'VARCHAR(20)' },
+      { name: 'death_date', mysql: 'DATE', pg: 'DATE' },
+      { name: 'updated_at', mysql: 'DATETIME', pg: 'TIMESTAMP' },
+    ],
+  },
   kskdepartment: {
     name: 'kskdepartment',
     alterOnly: true,
@@ -157,4 +178,17 @@ async function addMissingColumns(tableKey) {
   }
 }
 
-module.exports = { checkStatus, createTable, addMissingColumns, TABLES };
+// ข้อความ error ดิบตอนตารางของแอปยังไม่ถูกสร้าง อ่านแล้วไม่รู้ว่าต้องไปทำอะไรต่อ
+//   PostgreSQL : relation "app_xxx" does not exist
+//   MariaDB    : Table 'db.app_xxx' doesn't exist
+// แปลงให้บอกทางออกตรง ๆ ว่าต้องไปกดสร้างที่หน้าตั้งค่าการเชื่อมต่อฐานข้อมูล
+function explainMissingTable(err, appTables) {
+  const message = String((err && err.message) || '');
+  const missing = appTables.find((name) => message.includes(name));
+  if (missing && /does not exist|doesn't exist|Unknown table/i.test(message)) {
+    return `ยังไม่ได้สร้างตาราง ${missing} — เปิดหน้า "ตั้งค่าการเชื่อมต่อฐานข้อมูล" แล้วกดปุ่มสร้างตาราง ${missing} ก่อน จึงจะเริ่มใช้งานได้`;
+  }
+  return message;
+}
+
+module.exports = { checkStatus, createTable, addMissingColumns, explainMissingTable, TABLES };

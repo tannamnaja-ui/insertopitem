@@ -18,6 +18,7 @@
     </div>
     <div class="pill">
       <span id="officerName">-</span>
+      <button class="link-btn" id="menuSettingsBtn" title="เลือกกล่องเมนูที่จะแสดง">⚙️ ตั้งค่าเมนู</button>
       <button class="link-btn" onclick="logout()">ออกจากระบบ</button>
     </div>
   </div>
@@ -27,110 +28,98 @@
     <span id="autoSummaryText">กำลังตรวจสอบสถานะการทำงานอัตโนมัติ...</span>
   </div>
 
-  <div class="menu-grid">
-    <a class="menu-box" href="template.html">
+  <!-- data-menu-key คือรหัสที่ใช้จำว่ากล่องไหนถูกสั่งซ่อน ห้ามเปลี่ยนหลังใช้งานจริงแล้ว
+       ส่วน data-auto-status คือ endpoint สถานะของงานอัตโนมัติ กล่องที่ไม่มี = ไม่ใช่งานอัตโนมัติ -->
+  <div class="menu-grid" id="menuGrid">
+    <a class="menu-box" href="template.html" data-menu-key="template">
       <div class="icon">🧾</div>
       <span class="tag">กล่องที่ 1</span>
       <h2>สร้าง Template ค่าใช้จ่าย</h2>
       <p>สร้างและจัดการชุดรายการค่าใช้จ่าย เลือกรายการจากคลังยา/เวชภัณฑ์ พร้อมกำหนดจำนวน เพื่อนำไปใช้ซ้ำได้รวดเร็ว</p>
     </a>
 
-    <a class="menu-box" href="insert-group.html">
+    <a class="menu-box" href="insert-group.html" data-menu-key="group">
       <div class="icon">👥</div>
       <span class="tag">กล่องที่ 2</span>
       <h2>Insert ค่าใช้จ่ายทั้งกลุ่ม</h2>
       <p>เลือก Template ที่สร้างไว้ พร้อมระบุแพทย์ผู้สั่ง เพื่อบันทึกค่าใช้จ่ายให้กับผู้ป่วยหลายรายพร้อมกัน</p>
     </a>
 
-    <a class="menu-box" href="insert-individual.html">
+    <a class="menu-box" href="insert-individual.html" data-menu-key="individual">
       <div class="icon">🧑‍⚕️</div>
       <span class="tag">กล่องที่ 3</span>
       <h2>Insert ค่าใช้จ่ายรายคน</h2>
       <p>เลือก Template และแพทย์ผู้สั่ง พร้อมระบุ VN เพื่อบันทึกค่าใช้จ่ายให้ผู้ป่วยรายบุคคล</p>
     </a>
 
-    <a class="menu-box" href="insert-df.html">
-      <span class="auto-badge unknown" id="autoBadge-df"><span class="status-dot"></span><span class="label">กำลังตรวจสอบ</span></span>
+    <a class="menu-box" href="insert-df.html" data-menu-key="df"
+       data-auto-status="/api/dfauto/status" data-auto-name="ค่า DF แพทย์">
+      <span class="auto-badge unknown"><span class="status-dot"></span><span class="label">กำลังตรวจสอบ</span></span>
       <div class="icon">💰</div>
       <span class="tag">กล่องที่ 4</span>
       <h2>เพิ่มค่า DF แพทย์ <span class="auto-word">อัตโนมัติ</span></h2>
       <p>เพิ่มค่า DF แพทย์ให้<span class="auto-word">อัตโนมัติ</span></p>
     </a>
 
-    <a class="menu-box" href="insert-opiauto.html">
-      <span class="auto-badge unknown" id="autoBadge-opi"><span class="status-dot"></span><span class="label">กำลังตรวจสอบ</span></span>
+    <a class="menu-box" href="insert-opiauto.html" data-menu-key="opi"
+       data-auto-status="/api/opiauto/status" data-auto-name="ค่าบริการ">
+      <span class="auto-badge unknown"><span class="status-dot"></span><span class="label">กำลังตรวจสอบ</span></span>
       <div class="icon">🧮</div>
       <span class="tag">กล่องที่ 5</span>
       <h2>เพิ่มค่าบริการ <span class="auto-word">อัตโนมัติ</span></h2>
       <p>เพิ่มค่าบริการให้ผู้ป่วยตามห้องตรวจที่ตั้งค่าไว้โดย<span class="auto-word">อัตโนมัติ</span></p>
     </a>
 
-    <a class="menu-box" href="insert-icd10formopi.html">
-      <span class="auto-badge unknown" id="autoBadge-icd10"><span class="status-dot"></span><span class="label">กำลังตรวจสอบ</span></span>
+    <a class="menu-box" href="insert-icd10formopi.html" data-menu-key="icd10"
+       data-auto-status="/api/icd10auto/status" data-auto-name="ICD10 ตามค่าบริการ">
+      <span class="auto-badge unknown"><span class="status-dot"></span><span class="label">กำลังตรวจสอบ</span></span>
       <div class="icon">🩺</div>
       <span class="tag">กล่องที่ 6</span>
       <h2>เพิ่ม ICD10 <span class="auto-word">อัตโนมัติ</span>ตามค่าบริการ</h2>
       <p>ลงรหัสวินิจฉัย ICD10 ให้ผู้ป่วยโดย<span class="auto-word">อัตโนมัติ</span> ตามรายการค่าบริการที่ผูกรหัสไว้</p>
     </a>
+
+    <a class="menu-box" href="clean-phone.html" data-menu-key="phone"
+       data-auto-status="/api/phoneclean/status" data-auto-name="ตัดตัวหนังสือออกจากเบอร์โทร">
+      <span class="auto-badge unknown"><span class="status-dot"></span><span class="label">กำลังตรวจสอบ</span></span>
+      <div class="icon">📱</div>
+      <span class="tag">กล่องที่ 7</span>
+      <h2>ตัดตัวหนังสือออกจากเบอร์โทรผู้ป่วย<span class="auto-word">อัตโนมัติ</span></h2>
+      <p>ตรวจเบอร์โทรในทะเบียนผู้ป่วยทุก 5 นาที แถวไหนมีตัวหนังสือปนอยู่ให้ตัดทิ้งเหลือแต่ตัวเลขโดย<span class="auto-word">อัตโนมัติ</span></p>
+    </a>
+
+    <a class="menu-box" href="death-update.html" data-menu-key="death"
+       data-auto-status="/api/deathupdate/status" data-auto-name="อัพเดทข้อมูลเสียชีวิต">
+      <span class="auto-badge unknown"><span class="status-dot"></span><span class="label">กำลังตรวจสอบ</span></span>
+      <div class="icon">🕯️</div>
+      <span class="tag">กล่องที่ 8</span>
+      <h2>อัพเดทข้อมูลเสียชีวิต person และคลินิกพิเศษ</h2>
+      <p>ตรวจตาราง death ทุก 5 นาที แล้วปิดสถานะสมาชิกคลินิกพิเศษและจำหน่ายผู้ป่วยใน person ให้<span class="auto-word">อัตโนมัติ</span></p>
+    </a>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="menuSettingsModal">
+  <div class="modal-panel">
+    <h2 style="margin-top:0;">ตั้งค่าเมนู</h2>
+    <p class="subtitle" style="margin-bottom:6px;">ติ๊กกล่องที่ต้องการ<strong>ซ่อน</strong> — กล่องที่ไม่ได้ติ๊กเท่านั้นที่จะแสดงบนหน้าเมนู</p>
+    <p class="subtitle" style="margin-bottom:18px;font-size:12.5px;">
+      ค่านี้บันทึกไว้ที่เซิร์ฟเวอร์ จึงมีผลกับทุกเครื่องที่เปิดระบบนี้<br>
+      การซ่อนมีผลเฉพาะหน้าเมนูเท่านั้น <strong>งานอัตโนมัติที่เปิดไว้ยังทำงานต่อตามปกติ</strong>
+    </p>
+
+    <div id="menuSettingsList"></div>
+
+    <div id="menuSettingsAlert" class="alert" style="margin-top:14px;"></div>
+
+    <div class="row" style="margin-top:18px;">
+      <button type="button" class="btn btn-gray" id="menuSettingsCancelBtn">ยกเลิก</button>
+      <button type="button" class="btn btn-primary" id="menuSettingsSaveBtn">บันทึก</button>
+    </div>
   </div>
 </div>
 
 <script src="js/common.js"></script>
-<script>
-  // งานอัตโนมัติทุกตัวทำงานพร้อมกันได้ แต่ละตัวมีสถานะเปิด/ปิดของตัวเอง
-  const AUTO_BOXES = [
-    { key: 'df',  name: 'ค่า DF แพทย์',  statusUrl: '/api/dfauto/status' },
-    { key: 'opi', name: 'ค่าบริการ',     statusUrl: '/api/opiauto/status' },
-    { key: 'icd10', name: 'ICD10 ตามค่าบริการ', statusUrl: '/api/icd10auto/status' },
-  ];
-
-  function renderBadge(key, state) {
-    const badge = document.getElementById('autoBadge-' + key);
-    if (!badge) return;
-    const label = badge.querySelector('.label');
-    if (state === null) {
-      badge.className = 'auto-badge unknown';
-      label.textContent = 'ตรวจสอบไม่ได้';
-      return;
-    }
-    badge.className = 'auto-badge ' + (state ? 'on' : 'off');
-    label.textContent = state ? 'อัตโนมัติ: เปิด' : 'อัตโนมัติ: ปิด';
-  }
-
-  async function loadAutoStatuses() {
-    const results = await Promise.all(AUTO_BOXES.map(async (box) => {
-      try {
-        const res = await fetch(box.statusUrl);
-        const data = await res.json();
-        return data.ok ? Boolean(data.state.enabled) : null;
-      } catch (err) {
-        return null;
-      }
-    }));
-
-    results.forEach((enabled, i) => renderBadge(AUTO_BOXES[i].key, enabled));
-
-    const summary = document.getElementById('autoSummary');
-    const summaryText = document.getElementById('autoSummaryText');
-    const onNames = AUTO_BOXES.filter((b, i) => results[i] === true).map((b) => b.name);
-    const dot = summary.querySelector('.status-dot');
-
-    if (onNames.length === 0) {
-      dot.className = 'status-dot missing';
-      summaryText.textContent = 'ยังไม่ได้เปิดการทำงานอัตโนมัติไว้เลย';
-    } else {
-      dot.className = 'status-dot complete';
-      summaryText.innerHTML = 'เปิดอัตโนมัติอยู่ ' + onNames.length + ' รายการ ทำงานพร้อมกันทุกๆ 5 นาที: <strong>' + onNames.join(' + ') + '</strong>';
-    }
-  }
-
-  requireAuthOrRedirect().then((officer) => {
-    if (officer) {
-      document.getElementById('officerName').textContent = officer.name;
-      loadAutoStatuses();
-      setInterval(loadAutoStatuses, 60 * 1000);
-    }
-  });
-</script>
+<script src="js/menu.js"></script>
 </body>
 </html>

@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>อัพเดทข้อมูลเสียชีวิต person และคลินิกพิเศษ</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div style="padding: 36px 24px;">
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-icon">🕯️</div>
+      <div>
+        <h1 style="margin-bottom:0;">อัพเดทข้อมูลเสียชีวิต person และคลินิกพิเศษ</h1>
+        <p class="subtitle" style="margin:0;">ตรวจตาราง death ทุก 5 นาที แล้วปิดสถานะคลินิกพิเศษและจำหน่ายใน person ให้<span class="auto-word">อัตโนมัติ</span></p>
+      </div>
+    </div>
+    <div class="pill">
+      <span id="officerName">-</span>
+      <button class="link-btn" onclick="logout()">ออกจากระบบ</button>
+    </div>
+  </div>
+
+  <a href="menu.html" class="back-link" style="max-width:1180px;margin-left:auto;margin-right:auto;display:block;">&larr; กลับไปหน้าเมนูหลัก</a>
+
+  <div class="card card-xl" style="margin: 0 auto;">
+    <div id="alert" class="alert"></div>
+
+    <div class="row" style="align-items:flex-start;">
+      <div>
+        <h2>อัปเดตอัตโนมัติทุก 5 นาที</h2>
+        <p class="subtitle" style="margin:0 0 6px;">
+          <strong>คลินิกพิเศษ</strong> — ตั้ง clinic_member_status_id = 3 และ discharge = 'Y'<br>
+          <strong>person</strong> — ตั้ง death = 'Y', person_discharge_id = 1, discharge_date และ death_date = วันที่เสียชีวิตจากตาราง death
+        </p>
+        <div class="status-line" id="autoStatusLine">
+          <span class="status-dot" id="autoStatusDot"></span>
+          <span id="autoStatusText">กำลังตรวจสอบ...</span>
+        </div>
+        <div id="lastRunText" style="font-size:12.5px;color:var(--ink-soft);margin-bottom:14px;"></div>
+      </div>
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <button type="button" class="btn btn-secondary btn-sm" id="toggleBtn">เปิดใช้งาน</button>
+        <button type="button" class="btn btn-outline btn-sm" id="runNowBtn">▶️ รันเดี๋ยวนี้</button>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="row" style="align-items:flex-end;flex-wrap:wrap;margin-bottom:8px;">
+      <div style="flex:1 1 auto;min-width:200px;">
+        <h2 style="margin-bottom:4px;">รายชื่อที่รออัปเดต</h2>
+        <p class="subtitle" style="margin:0;" id="pendingSummary">กำลังโหลด...</p>
+      </div>
+      <div class="field" style="flex:0 0 240px;margin-bottom:0;">
+        <label>ตารางปลายทาง</label>
+        <select id="targetFilter">
+          <option value="clinicmember">คลินิกพิเศษ (clinicmember)</option>
+          <option value="person">person</option>
+        </select>
+      </div>
+      <div class="field" style="flex:0 0 auto;margin-bottom:0;">
+        <button type="button" class="btn btn-outline btn-sm" id="refreshBtn">🔄 โหลดใหม่</button>
+      </div>
+    </div>
+
+    <table id="pendingTable">
+      <thead>
+        <tr><th style="width:110px;">HN</th><th>ชื่อ-สกุล</th><th style="width:130px;">วันที่เสียชีวิต</th><th id="flagHeader">สถานะปัจจุบัน</th></tr>
+      </thead>
+      <tbody id="pendingBody"></tbody>
+    </table>
+    <div id="pendingEmpty" class="empty-state hidden">ไม่มีรายการรออัปเดต</div>
+
+    <hr class="divider">
+
+    <h2 style="margin-bottom:4px;">ประวัติการอัปเดตล่าสุด</h2>
+    <p class="subtitle">บันทึกไว้ในตาราง app_death_update_log ว่าแถวไหนถูกระบบนี้อัปเดตเมื่อไหร่</p>
+
+    <table id="logTable">
+      <thead>
+        <tr><th style="width:110px;">HN</th><th>ชื่อ-สกุล</th><th style="width:170px;">ตารางปลายทาง</th><th style="width:130px;">วันที่เสียชีวิต</th><th style="width:170px;">เวลาที่อัปเดต</th></tr>
+      </thead>
+      <tbody id="logBody"></tbody>
+    </table>
+    <div id="logEmpty" class="empty-state hidden">ยังไม่เคยอัปเดต</div>
+  </div>
+</div>
+
+<script src="js/common.js"></script>
+<script src="js/death-update.js"></script>
+</body>
+</html>
