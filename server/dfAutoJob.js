@@ -42,7 +42,8 @@ async function runOnce() {
            o.vn, o.hn, o.vstdate, o.vsttime, o.pttype, o.main_dep AS dep_code,
            s.doctor,
            idep.icode,
-           COALESCE(dg.unitprice, ng.price, 0) AS unitprice,
+           -- ราคายึดจาก nondrugitems.price เป็นหลัก (รายการค่าบริการ/หัตถการเก็บราคาไว้ที่นี่)
+           COALESCE(ng.price, dg.unitprice, 0) AS unitprice,
            COALESCE(sd.income, '') AS income,
            COALESCE(sd.cost, 0) AS cost
          FROM ovst o
@@ -52,9 +53,13 @@ async function runOnce() {
            JOIN doctor doc ON doc.code = ds.doctor AND doc.position_id = 1
          ) s ON s.vn = o.vn
          JOIN app_df_item_department idep ON idep.depcode = o.main_dep
-         LEFT JOIN s_drugitems sd ON sd.icode = idep.icode
+         -- เพิ่มได้เฉพาะรายการที่ยังเปิดใช้งานอยู่ในคลัง (s_drugitems.istatus = 'Y')
+         -- ใช้ JOIN ธรรมดา ไม่ใช่ LEFT JOIN รายการที่ถูกปิดหรือถูกลบออกจากคลังจะไม่ถูกดีดให้
+         JOIN s_drugitems sd ON sd.icode = idep.icode AND sd.istatus = 'Y'
          LEFT JOIN drugitems dg ON dg.icode = idep.icode
-         LEFT JOIN nondrugitems ng ON ng.icode = idep.icode
+         -- ต้องมีรหัส adp ของ สปสช. กำกับไว้ จึงจะถือว่าเปิดใช้งาน (nondrugitems.nhso_adp_code)
+         -- ใช้ JOIN ธรรมดา รายการที่ยังไม่ได้ผูกรหัส adp จะไม่ถูกดีดให้
+         JOIN nondrugitems ng ON ng.icode = idep.icode AND COALESCE(ng.nhso_adp_code, '') <> ''
          LEFT JOIN app_df_auto_log log
            ON log.vn = o.vn AND log.doctor = s.doctor AND log.icode = idep.icode
          WHERE o.vstdate = CURRENT_DATE

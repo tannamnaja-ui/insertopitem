@@ -27,7 +27,7 @@ async function insertExpenseForVns({ templateId, doctorCode, depcode, vns, staff
            t.icode,
            t.qty,
            t.drugusage,
-           t.price AS unitprice,
+           COALESCE(ng.price, t.price) AS unitprice,
            o.vstdate,
            o.vsttime,
            ? AS doctor,
@@ -39,14 +39,22 @@ async function insertExpenseForVns({ templateId, doctorCode, depcode, vns, staff
            ? AS staff,
            p.paidst,
            ${nowTimestamp()} AS last_modified,
-           t.sum_price,
+           COALESCE(ng.price, t.price) * t.qty AS sum_price,
            t.cost,
            t.template_name AS sp_use,
            'ADD_APP' AS idr
        FROM ovst o
-       LEFT OUTER JOIN template_opitem t ON t.template_name = ?
+       JOIN template_opitem t ON t.template_name = ?
+       -- เพิ่มได้เฉพาะรายการที่ยังเปิดใช้งานอยู่ในคลัง (s_drugitems.istatus = 'Y')
+       -- ใช้ JOIN ธรรมดา ไม่ใช่ LEFT JOIN รายการที่ถูกปิดหรือถูกลบออกจากคลังจะไม่ถูกบันทึกให้
+       JOIN s_drugitems sd ON sd.icode = t.icode AND sd.istatus = 'Y'
+       -- ราคายึดจาก nondrugitems.price เป็นหลัก ถ้าไม่มีค่อยใช้ราคาที่เก็บไว้ตอนสร้าง template
+       LEFT JOIN nondrugitems ng ON ng.icode = t.icode
        LEFT OUTER JOIN pttype p ON p.pttype = o.pttype
-       WHERE o.vn IN (${vnPlaceholders})`,
+       WHERE o.vn IN (${vnPlaceholders})
+         -- รายการค่าบริการ/หัตถการต้องมีรหัส adp ของ สปสช. กำกับไว้จึงจะบันทึกให้
+         -- ส่วน "ยา" ไม่มีแถวใน nondrugitems จึงปล่อยผ่านตามเดิม (step 2 ยังต้องลง opi_dispense ให้)
+         AND (ng.icode IS NULL OR COALESCE(ng.nhso_adp_code, '') <> '')`,
       [doctorCode, depcode, staff, templateId, ...vns]
     );
 
