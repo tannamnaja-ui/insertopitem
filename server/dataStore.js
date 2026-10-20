@@ -7,6 +7,7 @@ const OPI_AUTO_STATE_PATH = path.join(__dirname, 'data', 'opiauto-state.json');
 const ICD10_AUTO_STATE_PATH = path.join(__dirname, 'data', 'icd10auto-state.json');
 const PHONE_CLEAN_STATE_PATH = path.join(__dirname, 'data', 'phoneclean-state.json');
 const DEATH_UPDATE_STATE_PATH = path.join(__dirname, 'data', 'deathupdate-state.json');
+const TYPE_AREA_STATE_PATH = path.join(__dirname, 'data', 'typearea-state.json');
 const MENU_VISIBILITY_PATH = path.join(__dirname, 'data', 'menu-visibility.json');
 const API_TOKEN_PATH = path.join(__dirname, 'data', 'apitoken.json');
 
@@ -73,6 +74,14 @@ function saveDeathUpdateState(state) {
   writeJson(DEATH_UPDATE_STATE_PATH, state);
 }
 
+function getTypeAreaState() {
+  return readJson(TYPE_AREA_STATE_PATH, { enabled: false, lastRun: null });
+}
+
+function saveTypeAreaState(state) {
+  writeJson(TYPE_AREA_STATE_PATH, state);
+}
+
 // รายชื่อ key ของกล่องเมนูที่ถูกสั่งซ่อน เก็บฝั่งเซิร์ฟเวอร์เหมือนค่าตั้งค่าตัวอื่นของแอป
 // จึงมีผลกับทุกเครื่องที่เปิดระบบนี้ ไม่ใช่แค่เบราว์เซอร์ที่กดตั้งค่า
 function getMenuVisibility() {
@@ -105,6 +114,8 @@ module.exports = {
   savePhoneCleanState,
   getDeathUpdateState,
   saveDeathUpdateState,
+  getTypeAreaState,
+  saveTypeAreaState,
   getMenuVisibility,
   saveMenuVisibility,
   getApiTokenConfig,

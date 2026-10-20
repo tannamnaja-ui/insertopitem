@@ -27,3 +27,4 @@ server/data/icd10auto-state.json
 server/data/phoneclean-state.json
 server/data/deathupdate-state.json
 server/data/menu-visibility.json
+server/data/typearea-state.json

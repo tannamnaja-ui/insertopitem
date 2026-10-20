@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ปรับ type_area ให้เป็น 4 ทั้ง patient และ person</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div style="padding: 36px 24px;">
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-icon">🏘️</div>
+      <div>
+        <h1 style="margin-bottom:0;">ปรับ type_area ให้เป็น 4 ทั้ง patient และ person</h1>
+        <p class="subtitle" style="margin:0;">ตรวจทุกวันเวลา 00:01 น. แล้วปรับคนไข้ที่ยังไม่เป็นประเภท 4 (นอกเขต) ให้เป็น 4 <span class="auto-word">อัตโนมัติ</span></p>
+      </div>
+    </div>
+    <div class="pill">
+      <span id="officerName">-</span>
+      <button class="link-btn" onclick="logout()">ออกจากระบบ</button>
+    </div>
+  </div>
+
+  <a href="menu.html" class="back-link" style="max-width:1180px;margin-left:auto;margin-right:auto;display:block;">&larr; กลับไปหน้าเมนูหลัก</a>
+
+  <div class="card card-xl" style="margin: 0 auto;">
+    <div id="alert" class="alert"></div>
+
+    <div class="alert alert-error show" style="margin-bottom:18px;font-size:18px;font-weight:700;line-height:1.5;">
+      ⚠️ ใช้เฉพาะ รพ. ที่<strong>ไม่มีคนไข้ในเขตรับผิดชอบ</strong>เท่านั้น — ระบบจะปรับคนไข้<strong>ทุกคน</strong>ให้เป็นประเภท 4 (นอกเขต)
+    </div>
+
+    <div class="row" style="align-items:flex-start;">
+      <div>
+        <h2>อัปเดตอัตโนมัติทุกวันเวลา 00:01 น.</h2>
+        <p class="subtitle" style="margin:0 0 6px;">
+          <strong>patient</strong> — ตั้ง type_area = 4 ให้ทุกแถวที่ยังไม่เป็น 4 (รวมค่าว่าง)<br>
+          <strong>person</strong> — ตั้ง house_regist_type_id = 4 ให้ทุกแถวที่ยังไม่เป็น 4 (รวมค่าว่าง)
+        </p>
+        <div class="status-line" id="autoStatusLine">
+          <span class="status-dot" id="autoStatusDot"></span>
+          <span id="autoStatusText">กำลังตรวจสอบ...</span>
+        </div>
+        <div id="lastRunText" style="font-size:12.5px;color:var(--ink-soft);margin-bottom:14px;"></div>
+      </div>
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <button type="button" class="btn btn-secondary btn-sm" id="toggleBtn">เปิดใช้งาน</button>
+        <button type="button" class="btn btn-outline btn-sm" id="runNowBtn">▶️ อัพเดทเดี๋ยวนี้</button>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="row" style="align-items:flex-end;flex-wrap:wrap;margin-bottom:8px;">
+      <div style="flex:1 1 auto;min-width:200px;">
+        <h2 style="margin-bottom:4px;">รายชื่อที่ยังไม่เป็น 4</h2>
+        <p class="subtitle" style="margin:0;" id="pendingSummary">กำลังโหลด...</p>
+      </div>
+      <div class="field" style="flex:0 0 260px;margin-bottom:0;">
+        <label>ตาราง</label>
+        <select id="targetFilter">
+          <option value="patient">patient (type_area)</option>
+          <option value="person">person (house_regist_type_id)</option>
+        </select>
+      </div>
+      <div class="field" style="flex:0 0 auto;margin-bottom:0;">
+        <button type="button" class="btn btn-outline btn-sm" id="refreshBtn">🔄 โหลดใหม่</button>
+      </div>
+    </div>
+
+    <table id="pendingTable">
+      <thead>
+        <tr><th style="width:70px;">#</th><th style="width:110px;">HN</th><th>ชื่อ-สกุล</th><th style="width:200px;" id="valueHeader">type_area ปัจจุบัน</th></tr>
+      </thead>
+      <tbody id="pendingBody"></tbody>
+    </table>
+    <div id="pendingEmpty" class="empty-state hidden">ไม่มีรายการรออัปเดต — ทุกคนเป็น 4 แล้ว</div>
+
+    <div class="row hidden" id="pager" style="justify-content:center;gap:12px;margin-top:12px;">
+      <button type="button" class="btn btn-outline btn-sm" id="prevBtn">&larr; ก่อนหน้า</button>
+      <span id="pageText" style="font-size:13px;align-self:center;"></span>
+      <button type="button" class="btn btn-outline btn-sm" id="nextBtn">ถัดไป &rarr;</button>
+    </div>
+
+    <hr class="divider">
+
+    <h2 style="margin-bottom:4px;">ประวัติการอัปเดตล่าสุด</h2>
+    <p class="subtitle">บันทึกค่าเดิมไว้ในตาราง app_type_area_log ก่อนเขียนทับ</p>
+
+    <table id="logTable">
+      <thead>
+        <tr><th style="width:110px;">HN</th><th>ชื่อ-สกุล</th><th style="width:140px;">ตาราง</th><th style="width:110px;">ค่าเดิม</th><th style="width:170px;">เวลาที่อัปเดต</th></tr>
+      </thead>
+      <tbody id="logBody"></tbody>
+    </table>
+    <div id="logEmpty" class="empty-state hidden">ยังไม่เคยอัปเดต</div>
+  </div>
+</div>
+
+<script src="js/common.js"></script>
+<script src="js/type-area.js"></script>
+</body>
+</html>

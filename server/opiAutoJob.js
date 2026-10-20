@@ -67,7 +67,9 @@ async function runOnce({ dateFrom, dateTo, depcode } = {}) {
            -- ราคายึดจาก nondrugitems.price เป็นหลัก (รายการค่าบริการ/หัตถการเก็บราคาไว้ที่นี่)
            COALESCE(ng.price, dg.unitprice, 0) AS unitprice,
            COALESCE(sd.income, '') AS income,
-           COALESCE(sd.cost, 0) AS cost
+           COALESCE(sd.cost, 0) AS cost,
+           -- paidst ยึดจาก pttype.paidst ของสิทธิ visit นั้นเท่านั้น ไม่มีค่าสำรอง
+           pt.paidst
          FROM ovst o
          JOIN app_opiauto_item_department idep ON idep.depcode = o.main_dep
          -- เพิ่มได้เฉพาะรายการที่ยังเปิดใช้งานอยู่ในคลัง (s_drugitems.istatus = 'Y')
@@ -103,7 +105,7 @@ async function runOnce({ dateFrom, dateTo, depcode } = {}) {
         valueTemplate: `(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ${nowTime()}, ?, ?, ?, ?, ?, ${nowTimestamp()}, ?, ?, ?, ?)`,
         toParams: (r) => [
           r.hos_guid, r.vn, r.hn, r.icode, 1, '', r.unitprice, r.vstdate, r.vsttime,
-          r.doctor, r.vstdate, r.dep_code, r.pttype, r.income, 'auto_auto', '03',
+          r.doctor, r.vstdate, r.dep_code, r.pttype, r.income, 'auto_auto', r.paidst,
           r.unitprice, r.cost, 'OPI_AUTO', 'OPI_AUTO',
         ],
         rows: candidates,

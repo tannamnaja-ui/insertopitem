@@ -107,6 +107,19 @@ const TABLES = {
       { name: 'updated_at', mysql: 'DATETIME', pg: 'TIMESTAMP' },
     ],
   },
+  app_type_area_log: {
+    name: 'app_type_area_log',
+    columns: [
+      { name: 'app_type_area_log_id', mysql: 'INT AUTO_INCREMENT PRIMARY KEY', pg: 'SERIAL PRIMARY KEY' },
+      { name: 'hn', mysql: 'VARCHAR(20)', pg: 'VARCHAR(20)' },
+      // 'patient' หรือ 'person' บอกว่าแถวนี้ไปอัปเดตตารางไหน
+      { name: 'target_table', mysql: 'VARCHAR(20)', pg: 'VARCHAR(20)' },
+      // คีย์ของแถวที่ถูกแก้ (patient = hn, person = person_id)
+      { name: 'row_key', mysql: 'VARCHAR(30)', pg: 'VARCHAR(30)' },
+      { name: 'old_value', mysql: 'VARCHAR(10)', pg: 'VARCHAR(10)' },
+      { name: 'updated_at', mysql: 'DATETIME', pg: 'TIMESTAMP' },
+    ],
+  },
   kskdepartment: {
     name: 'kskdepartment',
     alterOnly: true,

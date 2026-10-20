@@ -19,6 +19,7 @@ const TABLE_LABELS = {
   app_icd10_auto_log: 'app_icd10_auto_log',
   app_phone_clean_log: 'app_phone_clean_log',
   app_death_update_log: 'app_death_update_log',
+  app_type_area_log: 'app_type_area_log',
 };
 
 let dbType = 'mysql';
@@ -286,6 +287,7 @@ const checkAppIcd10OpiItemStatus = setupTableCheck('app_icd10_opi_item');
 const checkAppIcd10AutoLogStatus = setupTableCheck('app_icd10_auto_log');
 const checkAppPhoneCleanLogStatus = setupTableCheck('app_phone_clean_log');
 const checkAppDeathUpdateLogStatus = setupTableCheck('app_death_update_log');
+const checkAppTypeAreaLogStatus = setupTableCheck('app_type_area_log');
 
 loadExisting().then(() => {
   checkTemplateOpitemStatus();
@@ -297,4 +299,5 @@ loadExisting().then(() => {
   checkAppIcd10AutoLogStatus();
   checkAppPhoneCleanLogStatus();
   checkAppDeathUpdateLogStatus();
+  checkAppTypeAreaLogStatus();
 });
