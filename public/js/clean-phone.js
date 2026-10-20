@@ -25,10 +25,42 @@ function esc(value) {
     .replace(/"/g, '&quot;');
 }
 
-function showAlert(message, type) {
+let alertTimer = null;
+
+// persist = true ให้ข้อความค้างไว้จนกว่าจะมีข้อความใหม่ (ใช้กับผลการรัน ไม่ให้หายไปก่อนอ่านทัน)
+function showAlert(message, type, persist) {
+  clearTimeout(alertTimer);
   alertBox.className = 'alert show ' + (type === 'success' ? 'alert-success' : 'alert-error');
   alertBox.textContent = message;
-  setTimeout(() => alertBox.classList.remove('show'), 4000);
+  if (!persist) alertTimer = setTimeout(() => alertBox.classList.remove('show'), 4000);
+}
+
+let wasRunning = false;
+let pollTimer = null;
+
+// ระหว่างที่งานรันอยู่ ปิดปุ่มไว้และแสดงยอดที่ตัดไปแล้ว พอจบรอบให้แสดงผลค้างไว้และโหลดรายการใหม่
+function renderRunning(data) {
+  const running = Boolean(data.running);
+  runNowBtn.disabled = running;
+  if (running) {
+    const p = data.progress || {};
+    runNowBtn.textContent = 'กำลังตัด...';
+    lastRunText.textContent = `กำลังตัดจนหมด — ตัดไปแล้ว ${(p.cleaned || 0).toLocaleString('th-TH')} รายการ`
+      + ' (ปิดหน้านี้ได้ งานยังทำต่อ)';
+    if (!pollTimer) pollTimer = setInterval(loadStatus, 3000);
+  } else {
+    runNowBtn.textContent = '▶️ รันเดี๋ยวนี้ (ทำจนหมด)';
+    clearInterval(pollTimer);
+    pollTimer = null;
+    if (wasRunning) {
+      const lastRun = data.state.lastRun || {};
+      const cleaned = (lastRun.cleaned || 0).toLocaleString('th-TH');
+      if (lastRun.error) showAlert(`ตัดไป ${cleaned} รายการ แล้วเกิดข้อผิดพลาด: ${lastRun.error}`, 'error', true);
+      else showAlert(`รันเสร็จแล้ว ตัดไป ${cleaned} รายการ`, 'success', true);
+      loadAll();
+    }
+  }
+  wasRunning = running;
 }
 
 function renderLastRun(state) {
@@ -62,6 +94,7 @@ async function loadStatus() {
     toggleBtn.textContent = autoEnabled ? '⏸️ ปิดใช้งาน' : '▶️ เปิดใช้งาน';
     toggleBtn.className = 'btn btn-sm ' + (autoEnabled ? 'btn-danger' : 'btn-secondary');
     renderLastRun(data.state);
+    renderRunning(data);
   } catch (err) {
     autoStatusText.textContent = 'ไม่สามารถตรวจสอบสถานะได้';
   }
@@ -90,31 +123,21 @@ toggleBtn.addEventListener('click', async () => {
 });
 
 runNowBtn.addEventListener('click', async () => {
-  if (!confirm('กำลังจะแก้ไขเบอร์โทรในตาราง patient ของจริง\n\nค่าเดิมจะถูกบันทึกไว้ในตาราง app_phone_clean_log ก่อนเขียนทับ ยืนยันหรือไม่?')) return;
+  if (!confirm('กำลังจะแก้ไขเบอร์โทรในตาราง patient ของจริง โดยวนตัดจนไม่เหลือรายการค้าง\n\nค่าเดิมจะถูกบันทึกไว้ในตาราง app_phone_clean_log ก่อนเขียนทับ ยืนยันหรือไม่?')) return;
   runNowBtn.disabled = true;
-  const originalText = runNowBtn.textContent;
-  runNowBtn.textContent = 'กำลังรัน...';
   try {
     const res = await fetch('/api/phoneclean/run-now', { method: 'POST' });
     const data = await res.json();
-    if (data.ok) {
-      if (data.summary.skipped) {
-        showAlert('รอบก่อนหน้ายังทำงานไม่เสร็จ ระบบข้ามรอบนี้ไป', 'error');
-      } else if (data.summary.error) {
-        showAlert('รันแล้ว แต่เกิดข้อผิดพลาด: ' + data.summary.error, 'error');
-      } else {
-        showAlert(`รันเสร็จแล้ว ตัดไป ${data.summary.cleaned} รายการ`, 'success');
-      }
-      await loadStatus();
-      await loadAll();
-    } else {
-      showAlert(data.message || 'รันไม่สำเร็จ', 'error');
+    if (!data.ok) {
+      showAlert(data.message || 'สั่งรันไม่สำเร็จ', 'error', true);
+      runNowBtn.disabled = false;
+      return;
     }
+    showAlert(data.alreadyRunning ? 'กำลังรันอยู่แล้ว รอให้รอบนี้เสร็จก่อน' : 'เริ่มตัดแล้ว ระบบจะทำจนหมด', 'success');
+    await loadStatus();
   } catch (err) {
-    showAlert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์', 'error');
-  } finally {
+    showAlert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์', 'error', true);
     runNowBtn.disabled = false;
-    runNowBtn.textContent = originalText;
   }
 });
 

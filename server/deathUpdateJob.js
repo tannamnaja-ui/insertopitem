@@ -2,7 +2,7 @@ const db = require('./db');
 const { getDeathUpdateState, saveDeathUpdateState } = require('./dataStore');
 const { nowTimestamp, updateFrom } = require('./sqlDialect');
 const { insertRows } = require('./bulkInsert');
-const { explainMissingTable } = require('./schema');
+const { ensureTable, explainMissingTable } = require('./schema');
 
 // อัปเดตข้อมูลเสียชีวิตจากตาราง death ไปยัง clinicmember และ person อัตโนมัติ
 //
@@ -64,6 +64,7 @@ async function runOnce() {
   };
 
   try {
+    await ensureTable('app_death_update_log');
     const result = await db.transaction(async (query) => {
       // อ่านรายชื่อที่จะถูกแตะออกมาก่อน ใช้ทั้งเป็นยอดสรุปและเป็น log
       // อยู่ใน transaction เดียวกับ UPDATE จึงเห็นข้อมูลชุดเดียวกันเป๊ะ ๆ ยอดไม่มีทางเพี้ยน

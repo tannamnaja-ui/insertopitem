@@ -17,6 +17,11 @@ async function insertExpenseForVns({ templateId, doctorCode, depcode, vns, staff
   const vnPlaceholders = vns.map(() => '?').join(',');
 
   await db.transaction(async (query) => {
+    // จำ hos_guid ของรายการที่ลงผ่านแอปไว้ก่อนแล้ว (VN เดิมอาจเคยถูก insert มาก่อน)
+    // หลัง step 1 จะได้แยกออกว่าแถวไหน "เพิ่งเพิ่ม" รอบนี้ step 3 จะได้ลง log เฉพาะแถวใหม่ ไม่ซ้ำของเดิม
+    const addAppGuidsSql = `SELECT hos_guid FROM opitemrece WHERE vn IN (${vnPlaceholders}) AND idr = 'ADD_APP'`;
+    const existingGuids = new Set((await query(addAppGuidsSql, [...vns])).map((r) => r.hos_guid));
+
     // step 1: insert opitemrece จาก ovst join template_opitem (เฉพาะ vn ที่เลือก)
     await query(
       `INSERT INTO opitemrece (hos_guid, vn, hn, icode, qty, drugusage, unitprice, vstdate, vsttime,
@@ -58,7 +63,13 @@ async function insertExpenseForVns({ templateId, doctorCode, depcode, vns, staff
       [doctorCode, depcode, staff, templateId, ...vns]
     );
 
+    const newGuids = (await query(addAppGuidsSql, [...vns]))
+      .map((r) => r.hos_guid)
+      .filter((guid) => !existingGuids.has(guid));
+
     // step 2: insert opi_dispense จาก opitemrece ที่เพิ่ง insert (เฉพาะรายการยา icode ขึ้นต้นด้วย '1')
+    // ข้ามรายการที่มีใน opi_dispense อยู่แล้ว (od.hos_guid IS NULL) ไม่งั้น insert VN เดิมซ้ำ
+    // ยาของรอบก่อนจะถูกลง opi_dispense ซ้ำอีกชุด
     await query(
       `INSERT INTO opi_dispense (opi_dispense_id, hos_guid, icode, qty, usage_code, dose,
           frequency_code, time_code, drug_hint_text,
@@ -96,39 +107,43 @@ async function insertExpenseForVns({ templateId, doctorCode, depcode, vns, staff
          AND o.icode IS NOT NULL
          AND o.idr = 'ADD_APP'
          AND o.icode LIKE '1%'
+         AND od.hos_guid IS NULL
        ORDER BY modify_datetime)`,
       [...vns]
     );
 
     // step 3: insert officer_activity_log (1 แถวต่อ 1 รายการที่เพิ่งสร้างใน opitemrece)
-    await query(
-      `INSERT INTO officer_activity_log (officer_activity_log_id,
-          officer_id,
-          officer_activity_log_datetime,
-          officer_activity_log_computer,
-          officer_activity_log_table,
-          officer_activity_log_operation,
-          staff,
-          depcode,
-          officer_activity_log_parent_kv,
-          active_screen_class,
-          officer_activity_log_date)
-       (SELECT get_serialnumber('officer_activity_log_id') AS officer_activity_log_id,
-           ? AS officer_id,
-           ${nowTimestamp()} AS officer_activity_log_datetime,
-           'ADD_APP' AS officer_activity_log_computer,
-           'opitemrece' AS officer_activity_log_table,
-           'Add' AS officer_activity_log_operation,
-           ? AS staff,
-           ? AS depcode,
-           o.vn AS officer_activity_log_parent_kv,
-           'ADD_APP' AS active_screen_class,
-           o.vstdate AS officer_activity_log_date
-       FROM opitemrece o
-       WHERE o.vn IN (${vnPlaceholders})
-         AND o.idr = 'ADD_APP')`,
-      [officerId, staff, depcode, ...vns]
-    );
+    // จำกัดเฉพาะ hos_guid ที่เพิ่งเพิ่มรอบนี้ ทีละก้อนกันพารามิเตอร์เกินลิมิต
+    for (let i = 0; i < newGuids.length; i += 500) {
+      const guidPart = newGuids.slice(i, i + 500);
+      await query(
+        `INSERT INTO officer_activity_log (officer_activity_log_id,
+            officer_id,
+            officer_activity_log_datetime,
+            officer_activity_log_computer,
+            officer_activity_log_table,
+            officer_activity_log_operation,
+            staff,
+            depcode,
+            officer_activity_log_parent_kv,
+            active_screen_class,
+            officer_activity_log_date)
+         (SELECT get_serialnumber('officer_activity_log_id') AS officer_activity_log_id,
+             ? AS officer_id,
+             ${nowTimestamp()} AS officer_activity_log_datetime,
+             'ADD_APP' AS officer_activity_log_computer,
+             'opitemrece' AS officer_activity_log_table,
+             'Add' AS officer_activity_log_operation,
+             ? AS staff,
+             ? AS depcode,
+             o.vn AS officer_activity_log_parent_kv,
+             'ADD_APP' AS active_screen_class,
+             o.vstdate AS officer_activity_log_date
+         FROM opitemrece o
+         WHERE o.hos_guid IN (${guidPart.map(() => '?').join(',')}))`,
+        [officerId, staff, depcode, ...guidPart]
+      );
+    }
 
     // step 4: update ovst.staff เฉพาะ vn ที่เลือก
     await query(

@@ -73,7 +73,57 @@ function pendingWhere() {
            OR CHAR_LENGTH(p.mobile_phone_number) > ${MAX_PHONE_DIGITS})`;
 }
 
-async function runOnce() {
+// ตัดหนึ่งก้อน (ไม่เกิน MAX_ROWS_PER_RUN แถว) ใน transaction เดียว คืนจำนวนแถวที่ตัด
+async function cleanBatch() {
+  return db.transaction(async (query) => {
+    const candidates = await query(
+      `SELECT p.hn, p.mobile_phone_number
+         FROM patient p
+        WHERE ${pendingWhere()}
+        ORDER BY p.hn
+        LIMIT ${MAX_ROWS_PER_RUN}`
+    );
+
+    if (!candidates.length) return 0;
+
+    const rows = candidates.map((r) => ({
+      hn: r.hn,
+      oldValue: String(r.mobile_phone_number),
+      newValue: digitsOnly(r.mobile_phone_number),
+    }));
+
+    // เก็บค่าเดิมลง log ก่อน แล้วค่อยเขียนทับ ถ้า insert log พังจะ rollback ทั้งชุด
+    // ไม่มีทางที่ค่าเดิมจะหายไปโดยไม่มีบันทึก
+    await insertRows(query, {
+      table: 'app_phone_clean_log',
+      columns: ['hn', 'old_value', 'new_value', 'cleaned_at'],
+      valueTemplate: `(?, ?, ?, ${nowTimestamp()})`,
+      toParams: (r) => [r.hn, r.oldValue, r.newValue],
+      rows,
+    });
+
+    await updatePhones(query, rows);
+    return rows.length;
+  });
+}
+
+// เพดานก้อนต่อการกดเองหนึ่งครั้ง กันกรณีผิดปกติทำให้วนไม่จบ (500 × 2000 = 1 ล้านแถว)
+const MAX_BATCHES_UNTIL_DONE = 500;
+
+// ความคืบหน้าของรอบที่กำลังรัน ให้หน้าเว็บดึงไปแสดงระหว่างรอ
+let progress = null;
+
+function isRunning() {
+  return running;
+}
+
+function getProgress() {
+  return running ? { ...progress } : null;
+}
+
+// untilDone = false (รอบอัตโนมัติ) ทำแค่ก้อนเดียว ที่เหลือเก็บต่อรอบหน้า
+// untilDone = true  (กดเอง)        วนทำทีละก้อนจนไม่เหลือ แต่ละก้อนแยก transaction ให้ lock สั้น
+async function runOnce({ untilDone = false } = {}) {
   // ถ้ารอบก่อนหน้ายังทำงานไม่จบ ให้ข้ามรอบนี้ไป ไม่งั้นสองรอบจะแย่งอัปเดตแถวเดียวกัน
   if (running) {
     return { ranAt: new Date().toISOString(), cleaned: 0, error: null, skipped: true };
@@ -86,38 +136,16 @@ async function runOnce() {
     remaining: 0,
     error: null,
   };
+  progress = { startedAt: summary.ranAt, cleaned: 0 };
 
   try {
-    summary.cleaned = await db.transaction(async (query) => {
-      const candidates = await query(
-        `SELECT p.hn, p.mobile_phone_number
-           FROM patient p
-          WHERE ${pendingWhere()}
-          ORDER BY p.hn
-          LIMIT ${MAX_ROWS_PER_RUN}`
-      );
-
-      if (!candidates.length) return 0;
-
-      const rows = candidates.map((r) => ({
-        hn: r.hn,
-        oldValue: String(r.mobile_phone_number),
-        newValue: digitsOnly(r.mobile_phone_number),
-      }));
-
-      // เก็บค่าเดิมลง log ก่อน แล้วค่อยเขียนทับ ถ้า insert log พังจะ rollback ทั้งชุด
-      // ไม่มีทางที่ค่าเดิมจะหายไปโดยไม่มีบันทึก
-      await insertRows(query, {
-        table: 'app_phone_clean_log',
-        columns: ['hn', 'old_value', 'new_value', 'cleaned_at'],
-        valueTemplate: `(?, ?, ?, ${nowTimestamp()})`,
-        toParams: (r) => [r.hn, r.oldValue, r.newValue],
-        rows,
-      });
-
-      await updatePhones(query, rows);
-      return rows.length;
-    });
+    const maxBatches = untilDone ? MAX_BATCHES_UNTIL_DONE : 1;
+    for (let i = 0; i < maxBatches; i += 1) {
+      const done = await cleanBatch();
+      progress.cleaned += done;
+      if (done < MAX_ROWS_PER_RUN) break;
+    }
+    summary.cleaned = progress.cleaned;
 
     // ยอดคงค้างหลังรอบนี้ ใช้บอกหน้าเว็บว่ายังต้องรออีกกี่รอบถึงจะหมด
     const [{ pending_count: pendingCount } = { pending_count: 0 }] = await db.query(
@@ -125,9 +153,12 @@ async function runOnce() {
     );
     summary.remaining = Number(pendingCount) || 0;
   } catch (err) {
+    // ก้อนที่ทำเสร็จก่อนหน้าถูก commit ไปแล้ว ยอดที่ทำได้จริงจึงยึดตาม progress
+    summary.cleaned = progress.cleaned;
     summary.error = explainMissingTable(err, ['app_phone_clean_log']);
   } finally {
     running = false;
+    progress = null;
   }
 
   const state = getPhoneCleanState();
@@ -152,4 +183,4 @@ function startScheduler({ offsetMs = 0 } = {}) {
   }, offsetMs);
 }
 
-module.exports = { runOnce, startScheduler, digitsOnly, pendingWhere, MAX_ROWS_PER_RUN, MAX_PHONE_DIGITS };
+module.exports = { runOnce, startScheduler, isRunning, getProgress, digitsOnly, pendingWhere, MAX_ROWS_PER_RUN, MAX_PHONE_DIGITS };

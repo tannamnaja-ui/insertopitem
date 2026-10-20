@@ -11,7 +11,14 @@ const router = express.Router();
 const PREVIEW_LIMIT = 300;
 
 router.get('/status', requireAuth, (req, res) => {
-  res.json({ ok: true, state: getPhoneCleanState(), maxRowsPerRun: MAX_ROWS_PER_RUN, maxPhoneDigits: MAX_PHONE_DIGITS });
+  res.json({
+    ok: true,
+    state: getPhoneCleanState(),
+    maxRowsPerRun: MAX_ROWS_PER_RUN,
+    maxPhoneDigits: MAX_PHONE_DIGITS,
+    running: phoneCleanJob.isRunning(),
+    progress: phoneCleanJob.getProgress(),
+  });
 });
 
 router.post('/toggle', requireAuth, (req, res) => {
@@ -22,13 +29,14 @@ router.post('/toggle', requireAuth, (req, res) => {
   res.json({ ok: true, state });
 });
 
-router.post('/run-now', requireAuth, async (req, res) => {
-  try {
-    const summary = await phoneCleanJob.runOnce();
-    res.json({ ok: true, summary });
-  } catch (err) {
-    res.status(500).json({ ok: false, message: 'รันไม่สำเร็จ: ' + err.message });
+// กดเอง: วนตัดจนไม่เหลือ (ไม่ติดเพดาน 2000 แถวแบบรอบอัตโนมัติ)
+// หลายหมื่นแถวใช้เวลานาน จึงสั่งเริ่มแล้วตอบกลับทันที หน้าเว็บดึงความคืบหน้าจาก /status เอา
+router.post('/run-now', requireAuth, (req, res) => {
+  if (phoneCleanJob.isRunning()) {
+    return res.json({ ok: true, started: false, alreadyRunning: true });
   }
+  phoneCleanJob.runOnce({ untilDone: true }).catch(() => {});
+  res.json({ ok: true, started: true });
 });
 
 // รายชื่อที่รอตัด พร้อมค่าที่จะได้หลังตัด (คำนวณด้วยตรรกะเดียวกับตอนรันจริง)

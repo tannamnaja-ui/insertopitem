@@ -12,7 +12,12 @@ const PAGE_SIZE = 500;
 const LOG_LIMIT = 300;
 
 router.get('/status', requireAuth, (req, res) => {
-  res.json({ ok: true, state: getTypeAreaState() });
+  res.json({
+    ok: true,
+    state: getTypeAreaState(),
+    running: typeAreaJob.isRunning(),
+    progress: typeAreaJob.getProgress(),
+  });
 });
 
 router.post('/toggle', requireAuth, (req, res) => {
@@ -23,13 +28,14 @@ router.post('/toggle', requireAuth, (req, res) => {
   res.json({ ok: true, state });
 });
 
-router.post('/run-now', requireAuth, async (req, res) => {
-  try {
-    const summary = await typeAreaJob.runOnce();
-    res.json({ ok: true, summary });
-  } catch (err) {
-    res.status(500).json({ ok: false, message: 'รันไม่สำเร็จ: ' + err.message });
+// อัพเดททุกคนที่ยังไม่เป็น 4 ทั้งตาราง ไม่เกี่ยวกับหน้าที่เปิดดูอยู่
+// คนไข้หลักแสนใช้เวลาหลายนาที จึงสั่งเริ่มแล้วตอบกลับทันที หน้าเว็บดึงความคืบหน้าจาก /status เอา
+router.post('/run-now', requireAuth, (req, res) => {
+  if (typeAreaJob.isRunning()) {
+    return res.json({ ok: true, started: false, alreadyRunning: true });
   }
+  typeAreaJob.runOnce().catch(() => {});
+  res.json({ ok: true, started: true });
 });
 
 // รายชื่อที่ยังไม่เป็น 4 ใช้เงื่อนไขชุดเดียวกับตอนรันจริง

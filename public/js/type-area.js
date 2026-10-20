@@ -34,10 +34,43 @@ function esc(value) {
     .replace(/"/g, '&quot;');
 }
 
-function showAlert(message, type) {
+let alertTimer = null;
+
+// persist = true ให้ข้อความค้างไว้จนกว่าจะมีข้อความใหม่ (ใช้กับผลการอัพเดท ไม่ให้หายไปก่อนอ่านทัน)
+function showAlert(message, type, persist) {
+  clearTimeout(alertTimer);
   alertBox.className = 'alert show ' + (type === 'success' ? 'alert-success' : 'alert-error');
   alertBox.textContent = message;
-  setTimeout(() => alertBox.classList.remove('show'), 4000);
+  if (!persist) alertTimer = setTimeout(() => alertBox.classList.remove('show'), 4000);
+}
+
+let wasRunning = false;
+let pollTimer = null;
+
+// ระหว่างที่งานรันอยู่ ปิดปุ่มไว้และแสดงยอดที่ทำไปแล้ว พอจบรอบให้แสดงผลค้างไว้และโหลดรายชื่อใหม่
+function renderRunning(data) {
+  const running = Boolean(data.running);
+  runNowBtn.disabled = running;
+  if (running) {
+    const p = data.progress || {};
+    runNowBtn.textContent = 'กำลังอัพเดท...';
+    lastRunText.textContent = `กำลังอัพเดททุกคน — patient ${(p.patientUpdated || 0).toLocaleString('th-TH')} แถว, `
+      + `person ${(p.personUpdated || 0).toLocaleString('th-TH')} แถว (อาจใช้เวลาหลายนาที ปิดหน้านี้ได้ งานยังทำต่อ)`;
+    if (!pollTimer) pollTimer = setInterval(loadStatus, 3000);
+  } else {
+    runNowBtn.textContent = '▶️ อัพเดทเดี๋ยวนี้ (ทุกคน)';
+    clearInterval(pollTimer);
+    pollTimer = null;
+    if (wasRunning) {
+      const lastRun = data.state.lastRun || {};
+      const counts = `patient ${(lastRun.patientUpdated || 0).toLocaleString('th-TH')} แถว, person ${(lastRun.personUpdated || 0).toLocaleString('th-TH')} แถว`;
+      if (lastRun.error) showAlert(`อัพเดทได้ ${counts} แล้วเกิดข้อผิดพลาด: ${lastRun.error}`, 'error', true);
+      else showAlert(`อัพเดทเสร็จแล้ว — ${counts}`, 'success', true);
+      currentPage = 1;
+      loadAll();
+    }
+  }
+  wasRunning = running;
 }
 
 function renderLastRun(state) {
@@ -65,6 +98,7 @@ async function loadStatus() {
     toggleBtn.textContent = autoEnabled ? '⏸️ ปิดใช้งาน' : '▶️ เปิดใช้งาน';
     toggleBtn.className = 'btn btn-sm ' + (autoEnabled ? 'btn-danger' : 'btn-secondary');
     renderLastRun(data.state);
+    renderRunning(data);
   } catch (err) {
     autoStatusText.textContent = 'ไม่สามารถตรวจสอบสถานะได้';
   }
@@ -94,34 +128,24 @@ toggleBtn.addEventListener('click', async () => {
 });
 
 runNowBtn.addEventListener('click', async () => {
-  const warning = 'กำลังจะปรับ patient.type_area และ person.house_regist_type_id ของทุกคนที่ยังไม่เป็น 4 ให้เป็น 4 ของจริง\n\n'
+  const warning = 'กำลังจะปรับ patient.type_area และ person.house_regist_type_id ของทุกคนที่ยังไม่เป็น 4 ให้เป็น 4 ของจริง\n'
+    + '(ทุกคนทั้งตาราง ไม่ใช่เฉพาะหน้าที่เปิดดูอยู่)\n\n'
     + 'ใช้เฉพาะ รพ. ที่ไม่มีคนไข้ในเขตเท่านั้น ค่าเดิมจะถูกบันทึกไว้ในตาราง app_type_area_log ยืนยันหรือไม่?';
   if (!confirm(warning)) return;
   runNowBtn.disabled = true;
-  const originalText = runNowBtn.textContent;
-  runNowBtn.textContent = 'กำลังอัพเดท...';
   try {
     const res = await fetch('/api/typearea/run-now', { method: 'POST' });
     const data = await res.json();
-    if (data.ok) {
-      if (data.summary.skipped) {
-        showAlert('รอบก่อนหน้ายังทำงานไม่เสร็จ ระบบข้ามรอบนี้ไป', 'error');
-      } else if (data.summary.error) {
-        showAlert('รันแล้ว แต่เกิดข้อผิดพลาด: ' + data.summary.error, 'error');
-      } else {
-        showAlert(`อัพเดทเสร็จแล้ว — patient ${data.summary.patientUpdated} แถว, person ${data.summary.personUpdated} แถว`, 'success');
-      }
-      currentPage = 1;
-      await loadStatus();
-      await loadAll();
-    } else {
-      showAlert(data.message || 'รันไม่สำเร็จ', 'error');
+    if (!data.ok) {
+      showAlert(data.message || 'สั่งอัพเดทไม่สำเร็จ', 'error', true);
+      runNowBtn.disabled = false;
+      return;
     }
+    showAlert(data.alreadyRunning ? 'กำลังอัพเดทอยู่แล้ว รอให้รอบนี้เสร็จก่อน' : 'เริ่มอัพเดททุกคนแล้ว', 'success');
+    await loadStatus();
   } catch (err) {
-    showAlert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์', 'error');
-  } finally {
+    showAlert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์', 'error', true);
     runNowBtn.disabled = false;
-    runNowBtn.textContent = originalText;
   }
 });
 

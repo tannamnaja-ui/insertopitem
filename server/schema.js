@@ -191,6 +191,14 @@ async function addMissingColumns(tableKey) {
   }
 }
 
+// ตาราง log ของงานอัตโนมัติ: ถ้ายังไม่มีให้สร้างเอง ถ้าคอลัมน์ไม่ครบให้เติม
+// กันงานล้มทั้งรอบเพียงเพราะผู้ใช้ลืมไปกดสร้างตารางที่หน้าตั้งค่า
+async function ensureTable(tableKey) {
+  const { status } = await checkStatus(tableKey);
+  if (status === 'missing') await createTable(tableKey);
+  else if (status === 'incomplete') await addMissingColumns(tableKey);
+}
+
 // ข้อความ error ดิบตอนตารางของแอปยังไม่ถูกสร้าง อ่านแล้วไม่รู้ว่าต้องไปทำอะไรต่อ
 //   PostgreSQL : relation "app_xxx" does not exist
 //   MariaDB    : Table 'db.app_xxx' doesn't exist
@@ -204,4 +212,4 @@ function explainMissingTable(err, appTables) {
   return message;
 }
 
-module.exports = { checkStatus, createTable, addMissingColumns, explainMissingTable, TABLES };
+module.exports = { checkStatus, createTable, addMissingColumns, ensureTable, explainMissingTable, TABLES };

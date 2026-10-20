@@ -2,7 +2,7 @@ const db = require('./db');
 const { getTypeAreaState, saveTypeAreaState } = require('./dataStore');
 const { nowTimestamp } = require('./sqlDialect');
 const { insertRows } = require('./bulkInsert');
-const { explainMissingTable } = require('./schema');
+const { ensureTable, explainMissingTable } = require('./schema');
 
 // ปรับ type_area ให้เป็น 4 (นอกเขต) อัตโนมัติ ทั้ง patient และ person
 //
@@ -94,14 +94,26 @@ async function runBatch(target) {
   });
 }
 
+// ความคืบหน้าของรอบที่กำลังรัน ให้หน้าเว็บดึงไปแสดงระหว่างรอ (7 แสนแถวใช้เวลาหลายนาที)
+let progress = null;
+
 async function runTarget(target) {
   let total = 0;
   for (let i = 0; i < MAX_BATCHES_PER_RUN; i += 1) {
     const done = await runBatch(target);
     total += done;
+    progress[target === 'patient' ? 'patientUpdated' : 'personUpdated'] = total;
     if (done < BATCH_SIZE) break;
   }
   return total;
+}
+
+function isRunning() {
+  return running;
+}
+
+function getProgress() {
+  return running ? { ...progress } : null;
 }
 
 async function runOnce() {
@@ -117,14 +129,20 @@ async function runOnce() {
     personUpdated: 0,
     error: null,
   };
+  progress = { startedAt: summary.ranAt, patientUpdated: 0, personUpdated: 0 };
 
   try {
+    await ensureTable('app_type_area_log');
     summary.patientUpdated = await runTarget('patient');
     summary.personUpdated = await runTarget('person');
   } catch (err) {
+    // แถวที่ทำเสร็จในก้อนก่อนหน้าถูก commit ไปแล้ว ยอดที่ทำได้จริงจึงยึดตาม progress
+    summary.patientUpdated = progress.patientUpdated;
+    summary.personUpdated = progress.personUpdated;
     summary.error = explainMissingTable(err, ['app_type_area_log']);
   } finally {
     running = false;
+    progress = null;
   }
 
   const state = getTypeAreaState();
@@ -160,4 +178,4 @@ function startScheduler() {
   schedule();
 }
 
-module.exports = { runOnce, startScheduler, pendingSql, countPending, TARGETS };
+module.exports = { runOnce, startScheduler, isRunning, getProgress, pendingSql, countPending, TARGETS };

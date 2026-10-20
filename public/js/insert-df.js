@@ -17,10 +17,14 @@ const STATUS_LABELS = {
   no_signer: '⚪ ไม่มีแพทย์ตรวจ',
 };
 
-function showAlert(message, type) {
+let alertTimer = null;
+
+// persist = true ให้ข้อความค้างไว้จนกว่าจะมีข้อความใหม่ (ใช้กับผลการรัน ไม่ให้หายไปก่อนอ่านทัน)
+function showAlert(message, type, persist) {
+  clearTimeout(alertTimer);
   alertBox.className = 'alert show ' + (type === 'success' ? 'alert-success' : 'alert-error');
   alertBox.textContent = message;
-  setTimeout(() => alertBox.classList.remove('show'), 4000);
+  if (!persist) alertTimer = setTimeout(() => alertBox.classList.remove('show'), 4000);
 }
 
 function renderLastRun(state) {
@@ -84,19 +88,19 @@ runNowBtn.addEventListener('click', async () => {
     const data = await res.json();
     if (data.ok) {
       if (data.summary.skipped) {
-        showAlert('รอบก่อนหน้ายังทำงานไม่เสร็จ ระบบข้ามรอบนี้ไปเพื่อไม่ให้เพิ่มรายการซ้ำ', 'error');
+        showAlert('รอบก่อนหน้ายังทำงานไม่เสร็จ ระบบข้ามรอบนี้ไปเพื่อไม่ให้เพิ่มรายการซ้ำ', 'error', true);
       } else if (data.summary.error) {
-        showAlert('รันแล้ว แต่เกิดข้อผิดพลาด: ' + data.summary.error, 'error');
+        showAlert('รันแล้ว แต่เกิดข้อผิดพลาด: ' + data.summary.error, 'error', true);
       } else {
-        showAlert(`รันเสร็จแล้ว เพิ่มรายการใหม่ ${data.summary.inserted} รายการ`, 'success');
+        showAlert(`รันเสร็จแล้ว เพิ่มรายการใหม่ ${data.summary.inserted} รายการ`, 'success', true);
       }
       await loadStatus();
       await loadRegistry();
     } else {
-      showAlert(data.message || 'รันไม่สำเร็จ', 'error');
+      showAlert(data.message || 'รันไม่สำเร็จ', 'error', true);
     }
   } catch (err) {
-    showAlert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์', 'error');
+    showAlert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์', 'error', true);
   } finally {
     runNowBtn.disabled = false;
     runNowBtn.textContent = originalText;
